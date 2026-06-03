@@ -1,0 +1,328 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { NavLink, useLocation, Link } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  MessageCircle,
+  Heart,
+  BookOpen,
+  Calendar,
+  Users,
+  Settings,
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
+  Sparkles,
+  Wind
+} from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '@hooks/useRedux';
+import { toggleSidebar, setSidebarOpen } from '@redux/slices/uiSlice';
+import { cn } from '@utils/cn';
+
+const menuItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'AI Therapist', path: '/chat', icon: MessageCircle },
+  { name: 'Mood Tracker', path: '/mood', icon: Heart },
+  { name: 'Journal', path: '/journal', icon: BookOpen },
+  { name: 'Appointments', path: '/appointments', icon: Calendar },
+  { name: 'Community', path: '/community', icon: Users },
+];
+
+const affirmations = [
+  "You are doing better than you think.",
+  "One small step is still progress.",
+  "You do not have to finish everything at once.",
+  "Breathe gently. You are safe in this moment.",
+  "Your feelings are valid.",
+  "You are worthy of care and compassion.",
+  "It is okay to rest when you are tired.",
+  "You are stronger than the challenges you face.",
+  "Today is a new opportunity for growth.",
+  "Be kind to yourself today.",
+  "You are a work in progress, and that is beautiful.",
+  "Your potential is limitless.",
+  "Trust the timing of your life.",
+  "You are enough, exactly as you are.",
+  "Give yourself permission to take a break.",
+  "Quiet your mind and listen to your heart.",
+  "Success is not final, failure is not fatal.",
+  "You possess the strength to overcome.",
+  "Your pace is perfectly fine.",
+  "Inhale peace, exhale worry.",
+  "Small victories are still victories.",
+  "You have the power to create change.",
+  "Focus on what you can control.",
+  "Your mental health is a priority.",
+  "You are not alone in your journey.",
+  "Allow yourself to feel and heal.",
+  "Every day is a chance to start again.",
+  "You deserve to be happy.",
+  "Your best is enough.",
+  "Believe in the power of yet."
+];
+
+const bottomMenuItems = [
+  { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Help', path: '/help', icon: HelpCircle },
+];
+
+export const Sidebar: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const { isSidebarOpen } = useAppSelector((state) => state.ui);
+  const { profile } = useAppSelector((state) => state.auth);
+
+  const getDailyAffirmation = () => {
+    const today = new Date();
+    const index = (today.getDate() + today.getMonth() * 31 + today.getFullYear()) % affirmations.length;
+    return affirmations[index];
+  };
+
+  React.useEffect(() => {
+    if (window.innerWidth >= 768) {
+      dispatch(setSidebarOpen(true));
+    }
+  }, [dispatch]);
+
+  return (
+    <motion.aside
+      initial={false}
+      animate={{ width: isSidebarOpen ? 280 : 80 }}
+      className={cn(
+        'fixed left-4 top-24 bottom-4 z-40',
+        'rounded-2xl overflow-hidden',
+        'bg-white/80 dark:bg-calm-900/80',
+        'backdrop-blur-xl backdrop-saturate-150',
+        'border border-white/20 dark:border-white/10',
+        'shadow-glass dark:shadow-glassDark',
+        'transition-all duration-300 ease-out hidden md:block'
+      )}
+    >
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-calm-200/50 dark:border-calm-700/50">
+          <AnimatePresence mode="wait">
+            {isSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex items-center gap-3"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lavender-500 to-accent-500 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-calm-800 dark:text-white">
+                    {profile?.full_name || 'Welcome'}
+                  </p>
+                  <p className="text-xs text-calm-500">
+                    {profile?.role === 'therapist' ? 'Therapist' : 'Member'}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Toggle Button */}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => dispatch(toggleSidebar())}
+          className={cn(
+            'absolute -right-3 top-20 w-6 h-6 rounded-full',
+            'bg-white dark:bg-calm-800',
+            'border border-calm-200 dark:border-calm-700',
+            'shadow-md flex items-center justify-center',
+            'text-calm-500 hover:text-lavender-500 transition-colors'
+          )}
+        >
+          {isSidebarOpen ? (
+            <ChevronLeft className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </motion.button>
+
+        {/* Menu Items */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative',
+                  isActive
+                    ? 'bg-gradient-to-r from-lavender-500/10 to-accent-500/10 text-lavender-600 dark:text-lavender-400'
+                    : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-800'
+                )}
+              >
+                <motion.div
+                  whileHover={{
+                    scale: 1.1,
+                    boxShadow: "0 0 15px rgba(167, 139, 250, 0.4)"
+                  }}
+                  className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center transition-shadow',
+                    isActive
+                      ? 'bg-gradient-to-br from-lavender-500 to-accent-500 text-white'
+                      : 'bg-calm-100 dark:bg-calm-800'
+                  )}
+                >
+                  <item.icon className="w-4 h-4" />
+                </motion.div>
+                <AnimatePresence mode="wait">
+                  {isSidebarOpen && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="text-sm font-medium"
+                    >
+                      {item.name}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute left-0 w-1 h-6 bg-lavender-500 rounded-r-full"
+                  />
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Wellness Widgets */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="px-4 py-6 space-y-6 overflow-hidden border-t border-calm-200/50 dark:border-calm-700/50"
+            >
+              {/* Daily Affirmation Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-lavender-500/10 to-accent-500/10 border border-white/20 dark:border-white/5 backdrop-blur-md">
+                <div className="flex items-center gap-2 mb-2 text-lavender-600 dark:text-lavender-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Today's Reminder</span>
+                </div>
+                <p className="text-sm text-calm-700 dark:text-calm-200 font-medium leading-relaxed italic">
+                  "{getDailyAffirmation()}"
+                </p>
+              </div>
+
+              {/* Mindy Mood Companion */}
+              <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/40 dark:bg-calm-800/40 border border-white/20 dark:border-white/5">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-lavender-400 to-accent-400 flex items-center justify-center shadow-glow animate-pulse">
+                    <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center pt-1">
+                      <div className="flex gap-1.5">
+                        <div className="w-1 h-1 bg-white rounded-full anim-blink" />
+                        <div className="w-1 h-1 bg-white rounded-full anim-blink" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-white dark:border-calm-900" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-calm-800 dark:text-white">Mindy</p>
+                  <p className="text-xs text-calm-500">Always here</p>
+                </div>
+              </div>
+
+              {/* Breathing Animation */}
+              <div className="flex flex-col items-center gap-2 py-2">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <motion.div
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute w-8 h-8 rounded-full bg-lavender-500/20 border border-lavender-500/40"
+                  />
+                  <motion.div
+                    animate={{ scale: [1, 1.8, 1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute w-6 h-6 rounded-full bg-accent-500/10 border border-accent-500/20"
+                  />
+                  <Wind className="w-4 h-4 text-lavender-500 z-10" />
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-calm-400 font-bold">Breathe in...</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom Menu & Emergency */}
+        <div className="p-4 border-t border-calm-200/50 dark:border-calm-700/50 space-y-2">
+          {/* Emergency Link */}
+          {isSidebarOpen && (
+            <Link
+              to="/help"
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+                "bg-coral-500/10 border border-coral-500/20",
+                "hover:bg-coral-500/20 hover:border-coral-500/40 hover:shadow-lg hover:shadow-coral-500/10",
+                "group"
+              )}
+            >
+              <div className="w-8 h-8 rounded-lg bg-coral-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShieldAlert className="w-5 h-5 text-coral-600 dark:text-coral-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-coral-600 dark:text-coral-400">Emergency Support</span>
+                <span className="text-[10px] text-coral-500/70">Need urgent help?</span>
+              </div>
+            </Link>
+          )}
+
+          {bottomMenuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
+                  isActive
+                    ? 'bg-gradient-to-r from-lavender-500/10 to-accent-500/10 text-lavender-600 dark:text-lavender-400'
+                    : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-800'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center',
+                    isActive
+                      ? 'bg-gradient-to-br from-lavender-500 to-accent-500 text-white'
+                      : 'bg-calm-100 dark:bg-calm-800'
+                  )}
+                >
+                  <item.icon className="w-4 h-4" />
+                </div>
+                <AnimatePresence mode="wait">
+                  {isSidebarOpen && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="text-sm font-medium"
+                    >
+                      {item.name}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </NavLink>
+            );
+          })}
+        </div>
+      </div>
+    </motion.aside>
+  );
+};
+
+export default Sidebar;

@@ -1,0 +1,481 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Heart,
+  Smile,
+  Meh,
+  Frown,
+  Angry,
+  Battery,
+  CloudLightning,
+  Moon,
+  Activity,
+  TrendingUp,
+  Calendar,
+  Plus,
+  X,
+} from 'lucide-react';
+import { useAppSelector } from '@hooks/useRedux';
+import { useGetMoodsQuery, useCreateMoodMutation } from '@redux/api/apiSlice';
+import { GlassCard, GradientButton, Badge } from '@components/ui/Layout';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend,
+} from 'recharts';
+import { format, startOfWeek, eachDayOfInterval, subDays } from 'date-fns';
+import toast from 'react-hot-toast';
+
+const moodOptions = [
+  { value: 'great', label: 'Great', icon: Smile, color: 'text-mint-500', bgColor: 'bg-mint-100 dark:bg-mint-900/30' },
+  { value: 'good', label: 'Good', icon: Smile, color: 'text-primary-500', bgColor: 'bg-primary-100 dark:bg-primary-900/30' },
+  { value: 'neutral', label: 'Neutral', icon: Meh, color: 'text-amber-500', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  { value: 'low', label: 'Low', icon: Frown, color: 'text-coral-500', bgColor: 'bg-coral-100 dark:bg-coral-900/30' },
+  { value: 'bad', label: 'Bad', icon: Angry, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+];
+
+const activityOptions = [
+  'Exercise',
+  'Meditation',
+  'Reading',
+  'Socializing',
+  'Nature Walk',
+  'Creative Work',
+  'Self-care',
+  'Therapy',
+];
+
+const triggerOptions = [
+  'Work Stress',
+  'Relationships',
+  'Health',
+  'Finances',
+  'Sleep Issues',
+  'Social Media',
+  'Family',
+  'Work-Life Balance',
+];
+
+export const MoodPage: React.FC = () => {
+  const { profile } = useAppSelector((state) => state.auth);
+  const { data: moods = [], refetch } = useGetMoodsQuery({ limit: 30 });
+  const [createMood] = useCreateMoodMutation();
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [moodScore, setMoodScore] = useState(5);
+  const [energyLevel, setEnergyLevel] = useState(5);
+  const [anxietyLevel, setAnxietyLevel] = useState(5);
+  const [sleepQuality, setSleepQuality] = useState(5);
+  const [notes, setNotes] = useState('');
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+
+  const handleLogMood = async () => {
+    if (!selectedMood) {
+      toast.error('Please select a mood');
+      return;
+    }
+
+    try {
+      await createMood({
+        user_id: profile?.id,
+        mood: selectedMood,
+        mood_score: moodScore,
+        energy_level: energyLevel,
+        anxiety_level: anxietyLevel,
+        sleep_quality: sleepQuality,
+        notes,
+        activities: selectedActivities,
+        triggers: selectedTriggers,
+      }).unwrap();
+
+      toast.success('Mood logged successfully!');
+      setShowLogModal(false);
+      resetForm();
+      refetch();
+    } catch (error) {
+      toast.error('Failed to log mood');
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedMood(null);
+    setMoodScore(5);
+    setEnergyLevel(5);
+    setAnxietyLevel(5);
+    setSleepQuality(5);
+    setNotes('');
+    setSelectedActivities([]);
+    setSelectedTriggers([]);
+  };
+
+  // Chart data
+  const last7Days = moods.slice(0, 7).reverse().map((mood) => ({
+    day: format(new Date(mood.logged_at), 'EEE'),
+    mood: mood.mood_score,
+    energy: mood.energy_level,
+    anxiety: mood.anxiety_level,
+    sleep: mood.sleep_quality,
+  }));
+
+  const radarData = [
+    { subject: 'Mood', A: moodScore, fullMark: 10 },
+    { subject: 'Energy', A: energyLevel, fullMark: 10 },
+    { subject: 'Sleep', A: sleepQuality, fullMark: 10 },
+    { subject: 'Calm', A: 10 - anxietyLevel, fullMark: 10 },
+  ];
+
+  const weeklyAverage = last7Days.length > 0
+    ? (last7Days.reduce((acc, d) => acc + d.mood, 0) / last7Days.length).toFixed(1)
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-calm-800 dark:text-white">
+            Mood Tracker
+          </h1>
+          <p className="text-calm-500 dark:text-calm-400">
+            Track and understand your emotional patterns
+          </p>
+        </div>
+        <GradientButton icon={<Plus className="w-5 h-5" />} onClick={() => setShowLogModal(true)}>
+          Log Mood
+        </GradientButton>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Weekly Average', value: weeklyAverage, icon: TrendingUp, color: 'from-lavender-500 to-accent-500' },
+          { label: 'Current Streak', value: `${moods.length} days`, icon: Activity, color: 'from-mint-500 to-emerald-500' },
+          { label: 'Best Day This Week', value: last7Days.length > 0 ? Math.max(...last7Days.map(d => d.mood)) : '-', icon: Heart, color: 'from-coral-500 to-amber-500' },
+          { label: 'Logs This Month', value: moods.length, icon: Calendar, color: 'from-primary-500 to-cyan-500' },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <GlassCard className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                  <stat.icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-calm-500 dark:text-calm-400">{stat.label}</p>
+                  <p className="text-2xl font-bold text-calm-800 dark:text-white">{stat.value}</p>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Mood Trend Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2"
+        >
+          <GlassCard className="p-6" hover={false}>
+            <h2 className="text-xl font-bold text-calm-800 dark:text-white mb-6">
+              Mood Trend
+            </h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={last7Days}>
+                  <defs>
+                    <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <YAxis domain={[0, 10]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                  <Area type="monotone" dataKey="mood" stroke="#8b5cf6" strokeWidth={3} fill="url(#moodGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Wellness Radar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <GlassCard className="p-6" hover={false}>
+            <h2 className="text-xl font-bold text-calm-800 dark:text-white mb-6">
+              Wellness Radar
+            </h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#94a3b8" opacity={0.3} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <PolarRadiusAxis domain={[0, 10]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <Radar name="Wellness" dataKey="A" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Multi-metric Comparison */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="lg:col-span-2"
+        >
+          <GlassCard className="p-6" hover={false}>
+            <h2 className="text-xl font-bold text-calm-800 dark:text-white mb-6">
+              Weekly Metrics Comparison
+            </h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={last7Days}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <YAxis domain={[0, 10]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="mood" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6' }} name="Mood" />
+                  <Line type="monotone" dataKey="energy" stroke="#22c55e" strokeWidth={2} dot={{ fill: '#22c55e' }} name="Energy" />
+                  <Line type="monotone" dataKey="sleep" stroke="#0ea5e9" strokeWidth={2} dot={{ fill: '#0ea5e9' }} name="Sleep" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Recent Logs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <GlassCard className="p-6" hover={false}>
+            <h2 className="text-xl font-bold text-calm-800 dark:text-white mb-4">
+              Recent Logs
+            </h2>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {moods.slice(0, 5).map((mood) => {
+                const moodOption = moodOptions.find(m => m.value === mood.mood);
+                const Icon = moodOption?.icon || Meh;
+                return (
+                  <div
+                    key={mood.id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-calm-50 dark:bg-calm-800/50"
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${moodOption?.bgColor} flex items-center justify-center`}>
+                      <Icon className={`w-5 h-5 ${moodOption?.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-calm-800 dark:text-white capitalize">
+                        {mood.mood}
+                      </p>
+                      <p className="text-xs text-calm-500">
+                        {format(new Date(mood.logged_at), 'MMM d, h:mm a')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-lavender-600 dark:text-lavender-400">
+                        {mood.mood_score}/10
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
+
+      {/* Log Mood Modal */}
+      <AnimatePresence>
+        {showLogModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowLogModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg"
+            >
+              <GlassCard className="p-6" hover={false}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-calm-800 dark:text-white">
+                    How are you feeling?
+                  </h2>
+                  <button
+                    onClick={() => setShowLogModal(false)}
+                    className="p-2 rounded-xl hover:bg-calm-100 dark:hover:bg-calm-800"
+                  >
+                    <X className="w-5 h-5 text-calm-500" />
+                  </button>
+                </div>
+
+                {/* Mood Selection */}
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-calm-700 dark:text-calm-300 mb-3">
+                    Select your mood
+                  </p>
+                  <div className="flex justify-between gap-2">
+                    {moodOptions.map((mood) => (
+                      <motion.button
+                        key={mood.value}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setSelectedMood(mood.value);
+                          setMoodScore(moodOptions.indexOf(mood) * 2 + 2);
+                        }}
+                        className={`flex-1 aspect-square rounded-xl ${mood.bgColor} flex flex-col items-center justify-center gap-1 border-2 transition-all ${
+                          selectedMood === mood.value
+                            ? 'border-lavender-500 shadow-glow'
+                            : 'border-transparent'
+                        }`}
+                      >
+                        <mood.icon className={`w-6 h-6 ${mood.color}`} />
+                        <span className="text-xs text-calm-600 dark:text-calm-300">
+                          {mood.label}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sliders */}
+                <div className="space-y-5 mb-6">
+                  {[
+                    { label: 'Mood Score', value: moodScore, onChange: setMoodScore, icon: Heart, color: 'from-lavender-500 to-accent-500' },
+                    { label: 'Energy Level', value: energyLevel, onChange: setEnergyLevel, icon: Battery, color: 'from-amber-500 to-orange-500' },
+                    { label: 'Anxiety Level', value: anxietyLevel, onChange: setAnxietyLevel, icon: CloudLightning, color: 'from-coral-500 to-red-500' },
+                    { label: 'Sleep Quality', value: sleepQuality, onChange: setSleepQuality, icon: Moon, color: 'from-primary-500 to-indigo-500' },
+                  ].map((slider) => (
+                    <div key={slider.label}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <slider.icon className="w-4 h-4 text-calm-500" />
+                          <span className="text-sm font-medium text-calm-700 dark:text-calm-300">
+                            {slider.label}
+                          </span>
+                        </div>
+                        <span className="text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent bg-gradient-to-r from-lavender-600 to-accent-600">
+                          {slider.value}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={slider.value}
+                        onChange={(e) => slider.onChange(parseInt(e.target.value))}
+                        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-calm-200 dark:bg-calm-700"
+                        style={{
+                          background: `linear-gradient(to right, ${slider.color.includes('lavender') ? '#8b5cf6' : slider.color.includes('amber') ? '#f59e0b' : slider.color.includes('coral') ? '#ef4444' : '#0ea5e9'} ${slider.value * 10}%, #e2e8f0 ${slider.value * 10}%)`,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Activities */}
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-calm-700 dark:text-calm-300 mb-2">
+                    Activities (optional)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {activityOptions.map((activity) => (
+                      <button
+                        key={activity}
+                        onClick={() => {
+                          setSelectedActivities((prev) =>
+                            prev.includes(activity)
+                              ? prev.filter((a) => a !== activity)
+                              : [...prev, activity]
+                          );
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          selectedActivities.includes(activity)
+                            ? 'bg-lavender-500 text-white'
+                            : 'bg-calm-100 dark:bg-calm-800 text-calm-600 dark:text-calm-300'
+                        }`}
+                      >
+                        {activity}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-calm-700 dark:text-calm-300 mb-2">
+                    Notes (optional)
+                  </p>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="How was your day?"
+                    className="w-full px-4 py-3 rounded-xl bg-calm-100/50 dark:bg-calm-800/50 border border-calm-200 dark:border-calm-700 text-calm-800 dark:text-white placeholder:text-calm-400 focus:outline-none focus:ring-2 focus:ring-lavender-500/50 transition-all resize-none"
+                    rows={3}
+                  />
+                </div>
+
+                <GradientButton onClick={handleLogMood} className="w-full" size="lg">
+                  Save Mood Log
+                </GradientButton>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default MoodPage;

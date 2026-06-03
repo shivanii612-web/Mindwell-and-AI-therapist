@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+.git
+.env
+.env.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.bolt
+typescript_errors.txt
+BACKUP_STRATEGY.md
+audit_report.md*
+dev_log.txt
+inspect-db.js

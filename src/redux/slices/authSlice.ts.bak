@@ -1,0 +1,327 @@
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { supabase } from '../../lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string;
+  role: 'user' | 'therapist' | 'admin';
+  phone: string;
+  date_of_birth: string | null;
+  gender: string;
+  bio: string;
+  is_verified: boolean;
+  is_active: boolean;
+  preferences: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AuthState {
+  user: User | null;
+  profile: Profile | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  error: string | null;
+}
+
+const initialState: AuthState = {
+  user: null,
+  profile: null,
+  session: null,
+  isLoading: true,
+  isAuthenticated: false,
+  error: null,
+};
+
+export const fetchProfile = createAsyncThunk(
+  'auth/fetchProfile',
+  async (userId: string, { rejectWithValue }) => {
+    // Mock Profile for Development
+    if (userId === 'mock-user-id') {
+      return {
+        id: 'mock-user-id',
+        email: 'admin@mindwell.com',
+        full_name: 'Admin User',
+        role: 'user',
+        is_verified: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const signIn = createAsyncThunk(
+  'auth/signIn',
+  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+    // Mock Login Bypass for Development
+    if (email === 'admin@mindwell.com' && password === 'admin123') {
+      return {
+        user: {
+          id: 'mock-user-id',
+          email: 'admin@mindwell.com',
+          user_metadata: { full_name: 'Admin User' }
+        },
+        session: {
+          access_token: 'mock-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: {
+            id: 'mock-user-id',
+            email: 'admin@mindwell.com',
+            user_metadata: { full_name: 'Admin User' }
+          }
+        }
+      } as any;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const signUp = createAsyncThunk(
+  'auth/signUp',
+  async (
+    { email, password, fullName }: { email: string; password: string; fullName: string },
+    { rejectWithValue }
+  ) => {
+    // Mock Sign-Up Bypass for Development
+    console.log('Mock Sign-Up:', { email, fullName });
+    return {
+      user: {
+        id: 'mock-user-id',
+        email,
+        user_metadata: { full_name: fullName }
+      },
+      session: {
+        access_token: 'mock-token',
+        user: {
+          id: 'mock-user-id',
+          email,
+          user_metadata: { full_name: fullName }
+        }
+      }
+    } as any;
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        await supabase.from('profiles').insert({
+          id: data.user.id,
+          email: email,
+          full_name: fullName,
+          role: 'user',
+        });
+      }
+
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const signOut = createAsyncThunk('auth/signOut', async (_, { rejectWithValue }) => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return null;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
+  }
+});
+
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (
+    { userId, updates }: { userId: string; updates: Partial<Profile> },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    setSession: (state, action: PayloadAction<Session | null>) => {
+      console.log('MindWell: Setting Session...', { hasSession: !!action.payload });
+      state.session = action.payload;
+      state.user = action.payload?.user ?? null;
+      state.isAuthenticated = !!action.payload?.user;
+
+      if (action.payload) {
+        localStorage.setItem('mindwell-session', JSON.stringify(action.payload));
+        localStorage.setItem('mindwell-user', JSON.stringify(action.payload.user));
+      }
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+    rehydrateAuth: (state) => {
+      console.log('MindWell: Rehydrating Auth State...');
+      try {
+        const storedSession = localStorage.getItem('mindwell-session');
+        const storedUser = localStorage.getItem('mindwell-user');
+        const storedProfile = localStorage.getItem('mindwell-profile');
+
+        if (storedSession && storedUser) {
+          state.session = JSON.parse(storedSession);
+          state.user = JSON.parse(storedUser);
+          state.profile = storedProfile ? JSON.parse(storedProfile) : null;
+          state.isAuthenticated = true;
+          console.log('MindWell: Auth Rehydrated Successfully', {
+            email: state.user?.email,
+            role: state.profile?.role
+          });
+        } else {
+          console.log('MindWell: No stored session found during rehydration');
+          state.isAuthenticated = false;
+        }
+      } catch (err) {
+        console.error('MindWell: Rehydration Error:', err);
+        state.isAuthenticated = false;
+      }
+      state.isLoading = false;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(signIn.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signIn.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.session = action.payload.session;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Persist to localStorage
+        localStorage.setItem('mindwell-session', JSON.stringify(action.payload.session));
+        localStorage.setItem('mindwell-user', JSON.stringify(action.payload.user));
+        console.log('MindWell: User Logged In & Session Persisted', { user: action.payload.user?.email });
+      })
+      .addCase(signIn.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.isAuthenticated = false;
+      })
+      .addCase(signUp.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signUp.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.session = action.payload.session;
+        state.user = action.payload.user;
+        state.isAuthenticated = !!action.payload.session;
+        state.error = null;
+
+        if (action.payload.session) {
+          localStorage.setItem('mindwell-session', JSON.stringify(action.payload.session));
+          localStorage.setItem('mindwell-user', JSON.stringify(action.payload.user));
+          console.log('MindWell: User Registered & Session Persisted', { user: action.payload.user?.email });
+        }
+      })
+      .addCase(signUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(signOut.fulfilled, (state) => {
+        state.user = null;
+        state.profile = null;
+        state.session = null;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+
+        // Clear localStorage
+        localStorage.removeItem('mindwell-session');
+        localStorage.removeItem('mindwell-user');
+        localStorage.removeItem('mindwell-profile');
+        console.log('MindWell: User Logged Out & Storage Cleared');
+      })
+      .addCase(fetchProfile.fulfilled, (state, action) => {
+        state.profile = action.payload;
+        if (action.payload) {
+          localStorage.setItem('mindwell-profile', JSON.stringify(action.payload));
+        }
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.profile = action.payload;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.error = null;
+      });
+  },
+});
+
+export const { clearError, setSession, setLoading, rehydrateAuth } = authSlice.actions;
+export default authSlice.reducer;

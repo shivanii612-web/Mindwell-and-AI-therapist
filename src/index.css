@@ -1,0 +1,216 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  html,
+  body,
+  #root {
+    scroll-behavior: smooth;
+    /* Defensive: Prevent accidental full-page inversion/rotation */
+    transform: none !important;
+    rotate: 0deg !important;
+    scale: 1 !important;
+    filter: none !important;
+    flex-direction: row !important;
+  }
+
+  body {
+    @apply font-sans antialiased;
+  }
+
+  * {
+    @apply border-calm-200 dark:border-calm-700;
+  }
+
+  ::selection {
+    @apply bg-lavender-200 dark:bg-lavender-800 text-lavender-900 dark:text-lavender-100;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-3;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-calm-300 dark:bg-calm-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-lavender-400 dark:bg-lavender-600;
+  }
+
+  /* Specific Defensive Protection for Auth Layout */
+  .auth-container,
+  .auth-left-section,
+  .auth-right-section {
+    transform: none !important;
+    rotate: 0deg !important;
+    scale: 1 !important;
+    writing-mode: horizontal-tb !important;
+    direction: ltr !important;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/80 dark:bg-calm-900/80 backdrop-blur-xl backdrop-saturate-150 border border-white/20 dark:border-white/10 shadow-glass dark:shadow-glassDark;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-lavender-600 via-accent-500 to-primary-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-br from-lavender-500 to-accent-500;
+  }
+
+  .shimmer {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:animate-shimmer;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  input[type='range'] {
+    @apply appearance-none h-2 rounded-full outline-none;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 rounded-full bg-lavender-500 cursor-pointer shadow-md transition-all;
+  }
+
+  input[type='range']::-webkit-slider-thumb:hover {
+    @apply bg-lavender-600 scale-110;
+  }
+
+  input[type='range']::-moz-range-thumb {
+    @apply w-5 h-5 rounded-full bg-lavender-500 cursor-pointer border-0;
+  }
+}
+
+/* Animation classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.5s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tooltip styles for Recharts */
+.recharts-tooltip-wrapper {
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+.pulse-ring::before {
+  content: '';
+  @apply absolute inset-0 rounded-full bg-current;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
