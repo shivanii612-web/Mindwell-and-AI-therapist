@@ -89,7 +89,7 @@ export const signIn = createAsyncThunk(
         });
       } catch (fetchError: any) {
         console.error('MindWell: Login Connectivity Error:', fetchError.message);
-        throw new Error('Backend server is not running on port 5000. Please ensure the backend is started.');
+        throw new Error('Could not connect to the server. Please ensure the backend is running.');
       }
 
       const data = await response.json();
@@ -121,7 +121,7 @@ export const signUp = createAsyncThunk(
         });
       } catch (fetchError: any) {
         console.error('MindWell: Registration Connectivity Error:', fetchError.message);
-        throw new Error('Backend server is not running on port 5000. Please ensure the backend is started.');
+        throw new Error('Could not connect to the server. Please ensure the backend is running.');
       }
 
       const data = await response.json();

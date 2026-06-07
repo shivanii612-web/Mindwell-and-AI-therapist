@@ -36,8 +36,8 @@ if (isRedisEnabled) {
             },
         });
 
-        redisConnection.connect().catch(() => {
-            // Silenced — error event handles logging
+        redisConnection.connect().catch((_err) => {
+            // Intentionally swallowed — error event on redisConnection handles logging
         });
 
         redisConnection.on('error', (err) => {

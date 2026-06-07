@@ -52,9 +52,11 @@ if (isRedisEnabled) {
             lazyConnect: true, // connect explicitly so startup is never blocked
         });
 
-        // Connect in the background — failure is non-fatal
-        redisClient.connect().catch(() => {
-            // connect() rejection is silenced here; the 'error' event handles logging
+        // Connect in the background — failure is non-fatal.
+        // The .catch() suppresses the unhandled rejection warning.
+        // The 'error' event on the client handles logging.
+        redisClient.connect().catch((_err) => {
+            // Intentionally swallowed — 'error' event on redisClient logs the warning
         });
 
         redisClient.on('connect', () => {

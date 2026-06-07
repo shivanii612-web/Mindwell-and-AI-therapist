@@ -1,0 +1,66 @@
+# MindWell AI Therapy Platform — Dependency Overview
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTE: This is NOT a Python requirements file.
+# This project uses Node.js (npm) for both frontend and backend.
+# This file provides a human-readable overview of all key dependencies.
+# For actual installation, use: npm install (frontend) and cd server && npm install (backend)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── RUNTIME REQUIREMENTS ─────────────────────────────────────────────────────
+Node.js >= 20.0.0
+npm    >= 9.0.0
+Docker >= 24.0.0         (optional, for containerised deployment)
+Redis  >= 6.0            (optional, for caching and job queues)
+
+# ── FRONTEND DEPENDENCIES (root package.json) ─────────────────────────────
+react                    ^18.3.1    # UI framework
+react-dom                ^18.3.1    # React DOM renderer
+react-router-dom         ^7.15.1    # Client-side routing
+@reduxjs/toolkit         ^2.12.0    # State management + RTK Query
+react-redux              ^9.3.0     # React bindings for Redux
+typescript               ^5.5.3     # Type safety
+vite                     ^5.4.2     # Build tool and dev server
+@vitejs/plugin-react     ^4.3.1     # Vite React plugin
+tailwindcss              ^3.4.1     # Utility-first CSS framework
+postcss                  ^8.4.35    # CSS processing
+autoprefixer             ^10.4.18   # CSS vendor prefixes
+framer-motion            ^12.40.0   # Animations
+recharts                 ^3.8.1     # Charts and data visualisation
+socket.io-client         ^4.8.3     # Real-time communication (client)
+date-fns                 ^4.3.0     # Date utilities
+react-hot-toast          ^2.6.0     # Toast notifications
+lucide-react             ^0.344.0   # Icon library
+uuid                     ^14.0.0    # UUID generation
+axios                    ^1.16.1    # HTTP client (utility)
+clsx                     ^2.1.1     # Conditional classnames
+tailwind-merge           ^3.6.0     # Tailwind class merging
+
+# ── BACKEND DEPENDENCIES (server/package.json) ────────────────────────────
+express                  ^4.19.2    # HTTP server framework
+mongoose                 ^8.4.1     # MongoDB ODM
+jsonwebtoken             ^9.0.3     # JWT access/refresh tokens
+bcryptjs                 ^3.0.3     # Password hashing
+socket.io                ^4.8.1     # Real-time bidirectional events
+ioredis                  ^5.11.0    # Redis client
+bullmq                   ^5.78.0    # Job queues (email, notifications)
+@google/generative-ai    ^0.11.4    # Google Gemini AI
+razorpay                 ^2.9.6     # Razorpay payment gateway
+nodemailer               ^8.0.10    # Email sending
+cors                     ^2.8.5     # Cross-origin resource sharing
+dotenv                   ^16.4.5    # Environment variable loading
+helmet                   ^8.2.0     # HTTP security headers
+express-rate-limit       ^8.5.2     # API rate limiting
+xss-clean                ^0.1.4     # XSS sanitisation
+winston                  ^3.19.0    # Structured logging
+uuid                     ^10.0.0    # UUID generation
+crypto                   built-in   # Payment signature verification
+
+# ── DEV DEPENDENCIES (backend) ────────────────────────────────────────────
+nodemon                  ^3.1.2     # Auto-restart on file changes
+
+# ── EXTERNAL SERVICES ─────────────────────────────────────────────────────
+MongoDB Atlas            cloud      # Primary database
+Google Gemini AI         API        # AI therapist chat
+Razorpay                 API        # Payment processing (test mode)
+Daily.co                 API        # Video/audio consultation (optional)
+Gmail SMTP               email      # Transactional email delivery

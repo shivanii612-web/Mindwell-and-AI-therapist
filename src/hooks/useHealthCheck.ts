@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { API_URL, joinUrl } from '@utils/apiUtils';
 
 const TOAST_ID = 'backend-connection-error';
-const GRACE_PERIOD_MS = 10000;
+const GRACE_PERIOD_MS = 15000;  // 15s grace on startup before showing error
 const POLLING_INTERVAL_MS = 30000;
 
 export const useHealthCheck = () => {
@@ -23,7 +23,7 @@ export const useHealthCheck = () => {
     const checkHealth = useCallback(async () => {
         try {
             const res = await fetch(joinUrl(API_URL, '/health'), {
-                signal: AbortSignal.timeout(4000)
+                signal: AbortSignal.timeout(8000)  // 8s timeout — handles slow network startup
             });
 
             if (res.ok) {

@@ -137,6 +137,10 @@ const PricingPage: React.FC = () => {
 
                             if (verifyResponse?.success) {
                                 toast.success(`🎉 ${plan.name} activated! Welcome to MindWell ${plan.name}.`);
+                                // Cleanup centering override
+                                const style = document.getElementById('rzp-center-fix');
+                                if (style) style.remove();
+                                document.body.style.overflow = '';
                                 // Refresh subscription and payment history immediately
                                 refetchSubscription();
                                 refetchHistory();
@@ -161,15 +165,69 @@ const PricingPage: React.FC = () => {
                     modal: {
                         ondismiss: () => {
                             // User closed the popup without paying
+                            // Remove centering override when modal closes
+                            const style = document.getElementById('rzp-center-fix');
+                            if (style) style.remove();
+                            document.body.style.overflow = '';
                             toast('Payment cancelled.', { icon: '↩️' });
                             setProcessingPlan(null);
                             resolve();
                         },
+                        // Ensure modal renders as a centered popup
+                        escape: true,
+                        animation: true,
+                        backdropclose: false,
                     },
                 };
 
+                // Inject CSS to force Razorpay modal to center on all screen sizes.
+                // Razorpay renders its iframe inside .razorpay-container — we override
+                // its positioning here since we cannot pass CSS directly to the SDK.
+                const existingStyle = document.getElementById('rzp-center-fix');
+                if (existingStyle) existingStyle.remove();
+                const centerStyle = document.createElement('style');
+                centerStyle.id = 'rzp-center-fix';
+                centerStyle.textContent = `
+                    .razorpay-container {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        z-index: 99999 !important;
+                        background: rgba(0,0,0,0.65) !important;
+                        backdrop-filter: blur(4px) !important;
+                        -webkit-backdrop-filter: blur(4px) !important;
+                        margin: 0 !important;
+                        padding: 16px !important;
+                        box-sizing: border-box !important;
+                    }
+                    .razorpay-container iframe {
+                        position: relative !important;
+                        top: auto !important;
+                        left: auto !important;
+                        transform: none !important;
+                        max-width: 480px !important;
+                        width: 100% !important;
+                        max-height: 90vh !important;
+                        border-radius: 16px !important;
+                        box-shadow: 0 25px 60px rgba(0,0,0,0.5) !important;
+                    }
+                    .razorpay-backdrop {
+                        display: none !important;
+                    }
+                `;
+                document.head.appendChild(centerStyle);
+
                 const rzp = new (window as any).Razorpay(options);
                 rzp.on('payment.failed', (response: any) => {
+                    // Cleanup on payment failure too
+                    const style = document.getElementById('rzp-center-fix');
+                    if (style) style.remove();
+                    document.body.style.overflow = '';
                     toast.error(response.error?.description || 'Payment failed. Please try again.');
                     setProcessingPlan(null);
                     resolve();
