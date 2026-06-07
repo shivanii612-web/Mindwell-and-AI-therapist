@@ -1,13 +1,20 @@
 services:
+  # ── Redis (optional cache + queue) ─────────────────────────────────────────
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: mindwell-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ── Backend (Node/Express) ──────────────────────────────────────────────────
   backend:
     build:
       context: ./server
@@ -16,28 +23,48 @@ services:
     ports:
       - "5000:5000"
     environment:
+      - NODE_ENV=production
       - PORT=5000
+      # MongoDB Atlas (loaded from root .env or shell environment)
       - MONGODB_URI=${MONGODB_URI}
+      # JWT
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      # AI
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Email
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - NODE_ENV=production
+      # Razorpay
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      # Daily.co (optional — kept for future use)
+      - DAILY_API_KEY=${DAILY_API_KEY}
+      - DAILY_DOMAIN=${DAILY_DOMAIN}
+      # Redis — enabled in Docker, uses service name 'redis'
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
     depends_on:
-      - redis
-    restart: always
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
+  # ── BullMQ Worker (email/notification jobs) ─────────────────────────────────
   worker:
     build:
       context: ./server
       dockerfile: Dockerfile
     container_name: mindwell-worker
-    command: node -e "import('./workers/notificationWorker.js');"
+    command: ["node", "worker-entry.js"]
     environment:
+      - NODE_ENV=production
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
@@ -45,23 +72,31 @@ services:
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - NODE_ENV=production
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
     depends_on:
-      - redis
-    restart: always
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
+  # ── Frontend (React/Vite built → served by NGINX) ───────────────────────────
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # VITE_ vars must be set at BUILD TIME — not runtime
+        - VITE_RAZORPAY_KEY_ID=${VITE_RAZORPAY_KEY_ID}
+        - VITE_ENABLE_DAILY=${VITE_ENABLE_DAILY:-false}
     container_name: mindwell-frontend
     ports:
       - "80:80"
     depends_on:
-      - backend
-    restart: always
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   redis_data:

@@ -42,8 +42,19 @@ export const DashboardLayout: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (profile?.role === 'admin') {
+  const role = profile?.role || 'user';
+  const path = window.location.pathname;
+
+  if (role === 'admin' && !path.startsWith('/admin')) {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (role === 'therapist' && !path.startsWith('/therapist') && !path.startsWith('/consultation')) {
+    return <Navigate to="/therapist" replace />;
+  }
+
+  if (role === 'user' && (path.startsWith('/admin') || path.startsWith('/therapist'))) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

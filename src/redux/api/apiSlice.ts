@@ -1,23 +1,10 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
-const API_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : `http://${window.location.hostname}:5000`;
+import { API_URL, joinUrl } from '@utils/apiUtils';
+
+// ... (other imports)
 
 // Mock data removed as per strict requirements
-
-const mockJournals: Journal[] = [
-  {
-    id: '1',
-    user_id: 'mock-user-id',
-    title: 'A New Beginning',
-    content: 'Today I started my journey towards better mental health. It feels good to finally take this step.',
-    mood: 'Hopeful',
-    mood_score: 7,
-    tags: ['first-entry', 'hope'],
-    is_private: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
 
 // Mock data removed as per strict requirements
 
@@ -41,13 +28,37 @@ const mockBaseQuery = async ({ url, method, body }: any) => {
     sessionStorage.removeItem('mindwell-session');
   };
 
-  // Handle ALL /api/ routes via real Backend
-  if (url.startsWith('/api/')) {
+  // Guard: ensure url is always a string (prevents 'Cannot read properties of undefined (reading startsWith)')
+  const safeUrl = typeof url === 'string' ? url : '';
+  if (!safeUrl) {
+    console.error('MindWell: apiSlice called with undefined/empty URL');
+    return { error: { status: 'FETCH_ERROR', error: 'Invalid API request: URL is missing.' } };
+  }
+
+  // Real backend API endpoints — routes that must NEVER be intercepted by mocks.
+  // The query builders pass paths like '/moods', '/appointments', '/journals', '/chat/...',
+  // '/auth/...', '/community/...', '/support/...', '/payments/...' — none start with '/api/'
+  // because joinUrl() appends the /api prefix itself. We must route ALL of these to the real
+  // backend. Only Supabase REST paths ('/rest/v1/...') should fall through to the mock block.
+  const isRealBackendRoute = (u: string): boolean => {
+    if (u.startsWith('/api/')) return true;
+    const realPrefixes = [
+      '/moods', '/journals', '/appointments', '/chat', '/auth',
+      '/community', '/support', '/payments', '/health', '/consultations',
+      '/therapist-applications',
+    ];
+    return realPrefixes.some(prefix => u.startsWith(prefix));
+  };
+
+  // Handle ALL real backend routes
+  if (isRealBackendRoute(safeUrl)) {
     try {
+
       let { token, refreshToken } = getTokens();
 
       const makeRequest = async (tokenToUse: string | null) => {
-        return fetch(`${API_URL}${url}`, {
+        const finalUrl = joinUrl(API_URL, safeUrl);
+        return fetch(finalUrl, {
           method,
           headers: {
             'Content-Type': 'application/json',
@@ -58,12 +69,23 @@ const mockBaseQuery = async ({ url, method, body }: any) => {
         });
       };
 
-      let response = await makeRequest(token);
+      let response;
+      try {
+        response = await makeRequest(token);
+      } catch (fetchError: any) {
+        console.error('MindWell: Fetch Error:', fetchError.message);
+        return {
+          error: {
+            status: 'FETCH_ERROR',
+            error: 'Connection to server failed. Retrying...'
+          }
+        };
+      }
 
       // Handle token expiration - Try refresh once
-      if (response.status === 401 && refreshToken && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+      if (response.status === 401 && refreshToken && !safeUrl.includes('/auth/login') && !safeUrl.includes('/auth/register')) {
         console.log('MindWell: Access token expired, attempting refresh...');
-        const refreshResponse = await fetch(`${API_URL}/api/auth/refresh-token`, {
+        const refreshResponse = await fetch(joinUrl(API_URL, '/auth/refresh-token'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken }),
@@ -84,33 +106,51 @@ const mockBaseQuery = async ({ url, method, body }: any) => {
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return { error: { status: response.status, data: errorData } };
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          return { error: { status: response.status, data: errorData } };
+        }
+        return { error: { status: response.status, data: { message: 'Server error' } } };
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('MindWell: Expected JSON but received:', contentType);
+        return {
+          error: {
+            status: 'FETCH_ERROR',
+            error: 'API unavailable'
+          }
+        };
       }
 
       const data = await response.json();
       return { data };
     } catch (error) {
       console.error('API Fetch Error:', error);
-      return { error: { status: 'FETCH_ERROR', error: (error as Error).message } };
+      return {
+        error: {
+          status: 'FETCH_ERROR',
+          error: 'Connection error'
+        }
+      };
     }
   }
 
-  // 1. Handle others via Mocks (for Supabase compat if needed)
+  // Supabase REST-style paths — return empty, these are legacy/unused routes.
+  // Real data is served by the backend via the isRealBackendRoute() block above.
   if (url.includes('/rest/v1/moods')) {
-    return { data: [] }; // No mock moods
+    return { data: [] };
   }
   if (url.includes('/rest/v1/journals')) {
-    if (url.includes('id=eq.')) {
-      return { data: [mockJournals[0]] };
-    }
-    return { data: mockJournals };
+    return { data: [] }; // No mock journals — real data comes from /journals endpoint
   }
   if (url.includes('/rest/v1/therapists')) {
-    return { data: [] }; // No fake therapists
+    return { data: [] };
   }
   if (url.includes('/rest/v1/subscriptions')) {
-    return { data: [{ id: '1', user_id: 'mock-user-id', plan: 'Premium', status: 'active' }] };
+    return { data: [] };
   }
 
   return { data: [] };
@@ -233,14 +273,14 @@ export const apiSlice = createApi({
   endpoints: (builder) => ({
     getMoods: builder.query<Mood[], { limit?: number; offset?: number }>({
       query: ({ limit = 200, offset = 0 }) => ({
-        url: `/api/moods?limit=${limit}&offset=${offset}`,
+        url: `/moods?limit=${limit}&offset=${offset}`,
       }),
       transformResponse: (response: any[]) => response.map(item => ({ ...item, id: item._id })),
       providesTags: ['Mood'],
     }),
     createMood: builder.mutation<Mood, Partial<Mood>>({
       query: (mood) => ({
-        url: '/api/moods',
+        url: '/moods',
         method: 'POST',
         body: mood,
       }),
@@ -249,21 +289,21 @@ export const apiSlice = createApi({
     }),
     getJournals: builder.query<Journal[], { limit?: number; offset?: number }>({
       query: ({ limit = 20, offset = 0 }) => ({
-        url: `/api/journals?limit=${limit}&offset=${offset}`,
+        url: `/journals?limit=${limit}&offset=${offset}`,
       }),
       transformResponse: (response: any[]) => response.map(item => ({ ...item, id: item._id })),
       providesTags: ['Journal'],
     }),
     getJournal: builder.query<Journal, string>({
       query: (id) => ({
-        url: `/api/journals/${id}`,
+        url: `/journals/${id}`,
       }),
       transformResponse: (response: any) => ({ ...response, id: response._id }),
       providesTags: ['Journal'],
     }),
     createJournal: builder.mutation<Journal, Partial<Journal>>({
       query: (journal) => ({
-        url: '/api/journals',
+        url: '/journals',
         method: 'POST',
         body: journal,
       }),
@@ -272,7 +312,7 @@ export const apiSlice = createApi({
     }),
     updateJournal: builder.mutation<Journal, { id: string; updates: Partial<Journal> }>({
       query: ({ id, updates }) => ({
-        url: `/api/journals/${id}`,
+        url: `/journals/${id}`,
         method: 'PUT',
         body: updates,
       }),
@@ -280,7 +320,7 @@ export const apiSlice = createApi({
     }),
     deleteJournal: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/api/journals/${id}`,
+        url: `/journals/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Journal'],
@@ -305,14 +345,14 @@ export const apiSlice = createApi({
     }),
     getAppointments: builder.query<Appointment[], void>({
       query: () => ({
-        url: '/api/appointments',
+        url: '/appointments',
       }),
       transformResponse: (response: any[]) => response.map(item => ({ ...item, id: item._id })),
       providesTags: ['Appointment'],
     }),
     createAppointment: builder.mutation<Appointment, any>({
       query: (appointment) => ({
-        url: '/api/appointments',
+        url: '/appointments',
         method: 'POST',
         body: appointment,
       }),
@@ -320,15 +360,15 @@ export const apiSlice = createApi({
     }),
     updateAppointment: builder.mutation<Appointment, { id: string; updates: Partial<Appointment> }>({
       query: ({ id, updates }) => ({
-        url: `/rest/v1/appointments?id=eq.${id}`,
+        url: `/appointments/${id}`,
         method: 'PATCH',
-        body: JSON.stringify({ ...updates, updated_at: new Date().toISOString() }),
+        body: updates,
       }),
       invalidatesTags: ['Appointment'],
     }),
     getCommunityPosts: builder.query<CommunityPost[], { category?: string; limit?: number }>({
       query: ({ category, limit = 20 }) => {
-        let url = `/api/community/posts?limit=${limit}`;
+        let url = `/community/posts?limit=${limit}`;
         if (category) {
           url += `&category=${category}`;
         }
@@ -339,14 +379,14 @@ export const apiSlice = createApi({
     }),
     getCommunityPost: builder.query<CommunityPost, string>({
       query: (id) => ({
-        url: `/api/community/posts/${id}`,
+        url: `/community/posts/${id}`,
       }),
       transformResponse: (response: any) => ({ ...response, id: response._id }),
       providesTags: ['Community'],
     }),
     createCommunityPost: builder.mutation<CommunityPost, Partial<CommunityPost>>({
       query: (post) => ({
-        url: '/api/community/posts',
+        url: '/community/posts',
         method: 'POST',
         body: post,
       }),
@@ -354,21 +394,21 @@ export const apiSlice = createApi({
     }),
     getComments: builder.query<CommunityComment[], string>({
       query: (postId) => ({
-        url: `/api/community/posts/${postId}/comments`,
+        url: `/community/posts/${postId}/comments`,
       }),
       transformResponse: (response: any[]) => response.map(item => ({ ...item, id: item._id })),
       providesTags: ['Community'],
     }),
     toggleLike: builder.mutation<{ id: string; likes_count: number; is_liked: boolean }, string>({
       query: (id) => ({
-        url: `/api/community/posts/${id}/like`,
+        url: `/community/posts/${id}/like`,
         method: 'POST',
       }),
       invalidatesTags: ['Community'],
     }),
     addComment: builder.mutation<any, { postId: string; text: string }>({
       query: ({ postId, text }) => ({
-        url: `/api/community/posts/${postId}/comment`,
+        url: `/community/posts/${postId}/comment`,
         method: 'POST',
         body: { text },
       }),
@@ -376,7 +416,7 @@ export const apiSlice = createApi({
     }),
     createComment: builder.mutation<CommunityComment, Partial<CommunityComment>>({
       query: (comment) => ({
-        url: '/api/community/comments',
+        url: '/community/comments',
         method: 'POST',
         body: comment,
       }),
@@ -384,72 +424,88 @@ export const apiSlice = createApi({
     }),
     getPayments: builder.query<Payment[], void>({
       query: () => ({
-        url: '/rest/v1/payments?select=*&order=created_at.desc',
+        url: '/payments/history',
       }),
-      transformResponse: (response: Payment[]) => response,
+      transformResponse: (response: any) => {
+        const list = Array.isArray(response) ? response : (response?.payments || []);
+        return list.map((item: any) => ({ ...item, id: item._id }));
+      },
+      providesTags: ['Payment'],
+    }),
+    getPaymentHistory: builder.query<Payment[], void>({
+      query: () => ({
+        url: '/payments/history',
+      }),
+      transformResponse: (response: any) => {
+        const list = Array.isArray(response) ? response : (response?.payments || []);
+        return list.map((item: any) => ({ ...item, id: item._id }));
+      },
       providesTags: ['Payment'],
     }),
     createPayment: builder.mutation<Payment, Partial<Payment>>({
       query: (payment) => ({
-        url: '/rest/v1/payments',
+        url: '/payments/create-order',
         method: 'POST',
-        body: JSON.stringify(payment),
+        body: payment,
       }),
       invalidatesTags: ['Payment'],
     }),
     getSubscription: builder.query<any, void>({
-      query: () => '/api/payments/subscription',
+      query: () => '/payments/subscription',
       providesTags: ['Subscription'],
     }),
+    checkHealth: builder.query<{ status: string; server: string }, void>({
+      query: () => '/health',
+    }),
     getProfile: builder.query<any, void>({
-      query: () => '/api/auth/profile',
+      query: () => '/auth/profile',
       providesTags: ['Subscription'],
     }),
     login: builder.mutation<any, any>({
       query: (credentials) => ({
-        url: '/api/auth/login',
+        url: '/auth/login',
         method: 'POST',
         body: credentials,
       }),
     }),
     register: builder.mutation<any, any>({
       query: (userData) => ({
-        url: '/api/auth/register',
+        url: '/auth/register',
         method: 'POST',
         body: userData,
       }),
     }),
     updateProfile: builder.mutation<any, any>({
       query: (userData) => ({
-        url: '/api/auth/profile',
+        url: '/auth/profile',
         method: 'PUT',
         body: userData,
       }),
     }),
     changePassword: builder.mutation<{ success: boolean; message: string }, any>({
       query: (body) => ({
-        url: '/api/auth/change-password',
-        method: 'PUT',
+        url: '/auth/change-password',
+        method: 'POST', // Server route is POST /auth/change-password
         body,
       }),
     }),
     contactSupport: builder.mutation<{ message: string }, any>({
       query: (body) => ({
-        url: '/api/support/contact',
+        url: '/support/contact',
         method: 'POST',
         body,
       }),
     }),
     createPaymentOrder: builder.mutation<any, { planName: string, amount: number }>({
       query: (body) => ({
-        url: '/api/payments/create-order',
+        url: '/payments/create-order',
         method: 'POST',
         body,
       }),
     }),
     verifyPayment: builder.mutation<any, any>({
       query: (body) => ({
-        url: '/api/payments/verify',
+        url: '/payments/verify',
         method: 'POST',
         body,
       }),
@@ -483,10 +539,12 @@ export const {
   useGetCommentsQuery,
   useCreateCommentMutation,
   useGetPaymentsQuery,
+  useGetPaymentHistoryQuery,
   useCreatePaymentMutation,
   useGetSubscriptionQuery,
   useChangePasswordMutation,
   useContactSupportMutation,
   useCreatePaymentOrderMutation,
   useVerifyPaymentMutation,
+  useCheckHealthQuery,
 } = apiSlice;

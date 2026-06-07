@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   Heart,
   MessageCircle,
@@ -13,58 +13,63 @@ import {
   ChevronRight,
   Sparkles,
   Activity,
-} from 'lucide-react';
-import { GlassCard, GradientButton } from '../components/ui/Layout';
+} from "lucide-react";
+import { GlassCard, GradientButton } from "../components/ui/Layout";
+import { useAuth } from "../hooks/useAuth";
 
 const features = [
   {
     icon: Brain,
-    title: 'AI Therapist',
-    description: '24/7 supportive AI chat with emotional intelligence',
-    color: 'from-lavender-500 to-accent-500',
+    title: "AI Therapist",
+    description: "24/7 supportive AI chat with emotional intelligence",
+    color: "from-lavender-500 to-accent-500",
   },
   {
     icon: Activity,
-    title: 'Mood Tracking',
-    description: 'Visualize your emotional patterns and insights',
-    color: 'from-coral-500 to-amber-500',
+    title: "Mood Tracking",
+    description: "Visualize your emotional patterns and insights",
+    color: "from-coral-500 to-amber-500",
   },
   {
     icon: Calendar,
-    title: 'Video Sessions',
-    description: 'Connect with licensed therapists from anywhere',
-    color: 'from-primary-500 to-cyan-500',
+    title: "Video Sessions",
+    description: "Connect with licensed therapists from anywhere",
+    color: "from-primary-500 to-cyan-500",
   },
   {
     icon: BookOpen,
-    title: 'Journaling',
-    description: 'Private space to express and reflect on your thoughts',
-    color: 'from-mint-500 to-emerald-500',
+    title: "Journaling",
+    description: "Private space to express and reflect on your thoughts",
+    color: "from-mint-500 to-emerald-500",
   },
 ];
 
 const testimonials = [
   {
-    name: 'Sarah M.',
-    role: 'Member',
-    content: 'MindWell has been transformative for my mental health journey. The AI therapist is incredibly supportive.',
+    name: "Sarah M.",
+    role: "Member",
+    content:
+      "MindWell has been transformative for my mental health journey. The AI therapist is incredibly supportive.",
     rating: 5,
   },
   {
-    name: 'Dr. James K.',
-    role: 'Therapist',
-    content: 'An excellent platform that bridges the gap between technology and mental wellness.',
+    name: "Dr. James K.",
+    role: "Therapist",
+    content:
+      "An excellent platform that bridges the gap between technology and mental wellness.",
     rating: 5,
   },
   {
-    name: 'Emily R.',
-    role: 'Premium Member',
-    content: 'The mood tracking and journaling features helped me understand my patterns better.',
+    name: "Emily R.",
+    role: "Premium Member",
+    content:
+      "The mood tracking and journaling features helped me understand my patterns better.",
     rating: 5,
   },
 ];
 
 export const LandingPage: React.FC = () => {
+  const { isAuthenticated, profile } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-lavender-50 via-white to-primary-50 dark:from-calm-950 dark:via-calm-900 dark:to-calm-950">
       {/* Hero Section */}
@@ -116,23 +121,47 @@ export const LandingPage: React.FC = () => {
             </h1>
 
             <p className="text-xl text-calm-600 dark:text-calm-300 mb-10 max-w-2xl mx-auto">
-              AI-powered therapy, licensed professionals, and a supportive community.
-              All in one beautiful platform designed for your peace of mind.
+              AI-powered therapy, licensed professionals, and a supportive
+              community. All in one beautiful platform designed for your peace
+              of mind.
             </p>
-
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/signup">
-                <GradientButton size="lg" className="group">
-                  Start Your Journey
-                  <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </GradientButton>
-              </Link>
-              <Link to="/login">
-                <GradientButton variant="ghost" size="lg">
-                  Sign In
-                </GradientButton>
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  to={
+                    profile?.role === "therapist"
+                      ? "/therapist"
+                      : profile?.role === "admin"
+                        ? "/admin"
+                        : "/dashboard"
+                  }
+                >
+                  <GradientButton size="lg" className="group">
+                    Go to Portal
+                    <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </GradientButton>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/signup">
+                    <GradientButton size="lg" className="group">
+                      Start Your Journey
+                      <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </GradientButton>
+                  </Link>
+                  <Link to="/login">
+                    <GradientButton variant="ghost" size="lg">
+                      Sign In
+                    </GradientButton>
+                  </Link>
+                  <Link to="/therapist-apply">
+                    <GradientButton variant="ghost" size="lg" className="border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10">
+                      Join as Therapist
+                    </GradientButton>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
 
@@ -146,10 +175,10 @@ export const LandingPage: React.FC = () => {
             <GlassCard className="p-8" hover={false}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                 {[
-                  { value: '50K+', label: 'Active Users' },
-                  { value: '100+', label: 'Therapists' },
-                  { value: '4.9', label: 'User Rating' },
-                  { value: '24/7', label: 'AI Support' },
+                  { value: "50K+", label: "Active Users" },
+                  { value: "100+", label: "Therapists" },
+                  { value: "4.9", label: "User Rating" },
+                  { value: "24/7", label: "AI Support" },
                 ].map((stat, index) => (
                   <motion.div
                     key={stat.label}
@@ -161,7 +190,9 @@ export const LandingPage: React.FC = () => {
                     <div className="text-4xl font-bold bg-gradient-to-r from-lavender-600 to-accent-600 bg-clip-text text-transparent">
                       {stat.value}
                     </div>
-                    <div className="text-sm text-calm-500 mt-1">{stat.label}</div>
+                    <div className="text-sm text-calm-500 mt-1">
+                      {stat.label}
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -232,9 +263,21 @@ export const LandingPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: 1, title: 'Create Account', desc: 'Sign up for free and complete your wellness profile' },
-              { step: 2, title: 'Explore Tools', desc: 'Access AI therapy, mood tracking, and journaling' },
-              { step: 3, title: 'Connect & Grow', desc: 'Book sessions with therapists and join the community' },
+              {
+                step: 1,
+                title: "Create Account",
+                desc: "Sign up for free and complete your wellness profile",
+              },
+              {
+                step: 2,
+                title: "Explore Tools",
+                desc: "Access AI therapy, mood tracking, and journaling",
+              },
+              {
+                step: 3,
+                title: "Connect & Grow",
+                desc: "Book sessions with therapists and join the community",
+              },
             ].map((item, index) => (
               <motion.div
                 key={item.step}
@@ -282,7 +325,10 @@ export const LandingPage: React.FC = () => {
               <GlassCard className="p-6 h-full">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(item.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-amber-500 fill-current" />
+                    <Star
+                      key={i}
+                      className="w-5 h-5 text-amber-500 fill-current"
+                    />
                   ))}
                 </div>
                 <p className="text-calm-600 dark:text-calm-300 mb-4 italic">
@@ -316,7 +362,8 @@ export const LandingPage: React.FC = () => {
               Your mental health matters
             </h2>
             <p className="text-lg text-calm-500 dark:text-calm-400 mb-8">
-              Take the first step today. Start your free trial with no commitment.
+              Take the first step today. Start your free trial with no
+              commitment.
             </p>
             <Link to="/signup">
               <GradientButton size="lg" className="group">
@@ -341,6 +388,12 @@ export const LandingPage: React.FC = () => {
             <p className="text-sm text-calm-500">
               {new Date().getFullYear()} MindWell. All rights reserved.
             </p>
+            <Link
+              to="/therapist-apply"
+              className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-medium transition-colors"
+            >
+              Join as Therapist →
+            </Link>
           </div>
         </div>
       </footer>

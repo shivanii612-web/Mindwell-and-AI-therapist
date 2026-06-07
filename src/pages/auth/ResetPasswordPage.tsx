@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Heart, CheckCircle, ArrowLeft, Check } from 'lucide-react';
 import { GlassCard, GradientButton, GlassInput } from '@components/ui/Layout';
 import toast from 'react-hot-toast';
-const API_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : `http://${window.location.hostname}:5000`;
+import { API_URL, joinUrl } from '@utils/apiUtils';
 
 const passwordRequirements = [
     { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
@@ -59,7 +59,7 @@ export const ResetPasswordPage: React.FC = () => {
 
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+            const response = await fetch(joinUrl(API_URL, '/auth/reset-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

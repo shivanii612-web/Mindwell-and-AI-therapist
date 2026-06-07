@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { NavLink, useLocation, Link, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   MessageCircle,
@@ -9,19 +9,20 @@ import {
   Calendar,
   Users,
   Settings,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
   Sparkles,
-  Wind
+  Shield,
+  CreditCard,
+  AlertTriangle,
+  Activity
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@hooks/useRedux';
 import { toggleSidebar, setSidebarOpen, openModal, closeModal } from '@redux/slices/uiSlice';
 import { cn } from '@utils/cn';
-import { Avatar } from '@components/ui/Layout';
 
-const menuItems = [
+const userMenuItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'AI Therapist', path: '/chat', icon: MessageCircle },
   { name: 'Mood Tracker', path: '/mood', icon: Heart },
@@ -29,6 +30,26 @@ const menuItems = [
   { name: 'Appointments', path: '/appointments', icon: Calendar },
   { name: 'Community', path: '/community', icon: Users },
   { name: 'Subscription', path: '/pricing', icon: Sparkles },
+];
+
+const therapistMenuItems = [
+  { name: 'Dashboard', path: '/therapist?tab=dashboard', icon: LayoutDashboard },
+  { name: 'Consultation Room', path: '/consultation', icon: MessageCircle },
+  { name: 'Appointments', path: '/therapist?tab=appointments', icon: Calendar },
+  { name: 'Availability', path: '/therapist?tab=availability', icon: Sparkles },
+  { name: 'Session Notes', path: '/therapist?tab=notes', icon: BookOpen },
+];
+
+const adminMenuItems = [
+  { name: 'Admin Overview', path: '/admin?tab=overview', icon: LayoutDashboard },
+  { name: 'User Management', path: '/admin?tab=users', icon: Users },
+  { name: 'Therapist Accounts', path: '/admin?tab=therapists', icon: Shield },
+  { name: 'Applications', path: '/admin?tab=applications', icon: Activity },
+  { name: 'Appointments', path: '/admin?tab=appointments', icon: Calendar },
+  { name: 'Payments', path: '/admin?tab=payments', icon: CreditCard },
+  { name: 'Moderation', path: '/admin?tab=moderation', icon: ShieldAlert },
+  { name: 'Emergency Reports', path: '/admin?tab=emergency', icon: AlertTriangle },
+  { name: 'System Monitoring', path: '/admin?tab=monitoring', icon: Activity },
 ];
 
 const affirmations = [
@@ -182,24 +203,23 @@ export const Sidebar: React.FC = () => {
   }, [dispatch]);
 
   const renderMenuItem = (item: any, isBottom = false) => {
-    const isActive = location.pathname === item.path;
+    const fullPath = location.pathname + location.search;
+    const isActive = item.path === fullPath || (item.path === '/therapist' && (fullPath === '/therapist' || fullPath === '/therapist/'));
     const isEmergency = item.emergency;
 
     const content = (
       <>
         <div
           className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+            'w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300',
             isEmergency
-              ? 'bg-coral-500/10 text-coral-600 dark:text-coral-400'
+              ? 'bg-red-500/10 text-red-500 shadow-sm shadow-red-500/10'
               : isActive
-                ? isBottom
-                  ? 'bg-gradient-to-br from-lavender-500 to-accent-500 text-white'
-                  : 'bg-gradient-to-br from-lavender-500 to-accent-500 text-white'
-                : 'bg-calm-100 dark:bg-calm-800 group-hover:bg-calm-200 dark:group-hover:bg-calm-700'
+                ? 'bg-gradient-to-br from-lavender-500 to-accent-500 text-white shadow-glow scale-105'
+                : 'bg-white/10 dark:bg-white/5 text-calm-400 group-hover:text-lavender-500 group-hover:bg-lavender-500/10'
           )}
         >
-          <item.icon className="w-4 h-4" />
+          <item.icon className={cn("w-4.5 h-4.5 transition-transform duration-300", isActive && "scale-110")} />
         </div>
         <AnimatePresence mode="wait">
           {isSidebarOpen && (
@@ -207,7 +227,10 @@ export const Sidebar: React.FC = () => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="text-sm font-medium"
+              className={cn(
+                "text-sm font-semibold transition-colors duration-300",
+                isActive ? "text-lavender-600 dark:text-lavender-400" : "text-calm-500 dark:text-calm-400 group-hover:text-calm-700 dark:group-hover:text-calm-200"
+              )}
             >
               {item.name}
             </motion.span>
@@ -216,19 +239,19 @@ export const Sidebar: React.FC = () => {
         {isActive && !isEmergency && (
           <motion.div
             layoutId={isBottom ? "activeTabIndicatorBottom" : "activeTabIndicator"}
-            className="absolute left-0 w-1 h-6 bg-lavender-500 rounded-r-full"
+            className="absolute left-0 w-1 h-6 bg-lavender-500 rounded-r-full shadow-[0_0_12px_rgba(139,92,246,0.5)]"
           />
         )}
       </>
     );
 
     const baseClass = cn(
-      'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative group',
+      'flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group',
       isEmergency
-        ? 'bg-coral-500/5 text-coral-600 dark:text-coral-400 hover:bg-coral-500/10 shadow-sm shadow-coral-500/5'
+        ? 'bg-red-500/5 text-red-600 dark:text-red-400 hover:bg-red-500/10 mb-2'
         : isActive
-          ? 'bg-gradient-to-r from-lavender-500/10 to-accent-500/10 text-lavender-600 dark:text-lavender-400'
-          : 'text-calm-600 dark:text-calm-400 hover:bg-calm-100 dark:hover:bg-calm-800'
+          ? 'bg-lavender-500/10 dark:bg-lavender-500/10 border border-lavender-500/20'
+          : 'hover:bg-white/10 dark:hover:bg-white/5 border border-transparent'
     );
 
     if (isEmergency) {
@@ -245,7 +268,7 @@ export const Sidebar: React.FC = () => {
 
     return (
       <NavLink
-        key={item.path}
+        key={item.name + item.path}
         to={item.path}
         className={baseClass}
       >
@@ -280,17 +303,29 @@ export const Sidebar: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lavender-500 to-accent-500 flex items-center justify-center shadow-glow">
               <Heart className="w-6 h-6 text-white" />
             </div>
-            <span className={cn(
-              "text-xl font-bold bg-gradient-to-r from-lavender-600 to-accent-600 bg-clip-text text-transparent transition-opacity",
+            <div className={cn(
+              "flex flex-col transition-opacity",
               !isSidebarOpen && "opacity-0 invisible"
             )}>
-              MindWell
-            </span>
+              <span className="text-xl font-bold bg-gradient-to-r from-lavender-600 to-accent-600 bg-clip-text text-transparent">
+                MindWell
+              </span>
+              {profile?.role === 'therapist' && (
+                <span className="text-[10px] font-bold text-lavender-500 uppercase tracking-tighter -mt-1">
+                  Therapist Portal
+                </span>
+              )}
+              {profile?.role === 'admin' && (
+                <span className="text-[10px] font-bold text-accent-500 uppercase tracking-tighter -mt-1">
+                  Admin Panel
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Today's Reminder Card */}
           <AnimatePresence>
-            {isSidebarOpen && (
+            {isSidebarOpen && profile?.role === 'user' && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -330,12 +365,19 @@ export const Sidebar: React.FC = () => {
 
           {/* Menu Items */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
-            {menuItems.map((item) => renderMenuItem(item))}
+            {(profile?.role === 'admin' ? adminMenuItems :
+              profile?.role === 'therapist' ? therapistMenuItems :
+                userMenuItems).map((item) => renderMenuItem(item))}
           </nav>
 
           {/* Bottom Menu & Emergency */}
           <div className="p-4 border-t border-calm-200/50 dark:border-calm-700/50 space-y-1">
-            {bottomMenuItems.map((item) => renderMenuItem(item, true))}
+            {bottomMenuItems
+              .filter(item => {
+                if (item.emergency) return profile?.role === 'user';
+                return true;
+              })
+              .map((item) => renderMenuItem(item, true))}
           </div>
         </div>
       </motion.aside>

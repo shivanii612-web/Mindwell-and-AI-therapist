@@ -69,7 +69,7 @@ export const MoodPage: React.FC = () => {
 
     try {
       await createMood({
-        user_id: profile?.id,
+        userId: profile?.id,
         mood: selectedMood,
         mood_score: moodScore,
         notes,

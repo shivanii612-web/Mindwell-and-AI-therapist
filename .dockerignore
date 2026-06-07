@@ -1,16 +1,34 @@
+# Frontend build context exclusions
+# (used by root Dockerfile that builds the React/Vite app)
+
+# Dependencies — rebuilt inside container
 node_modules
 dist
-build
+
+# Backend — not needed in frontend build context
+server/
+!server/.env
+
+# Git
 .git
+.gitignore
+
+# Env files — secrets must not be baked into the image
 .env
 .env.local
+.env.*.local
+
+# Logs and temp files
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.bolt
-typescript_errors.txt
-BACKUP_STRATEGY.md
-audit_report.md*
-dev_log.txt
-inspect-db.js
+
+# Editor
+.vscode
+
+# Docker files themselves (no need to copy into build context)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+supabase/

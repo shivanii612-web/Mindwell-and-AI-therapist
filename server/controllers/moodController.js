@@ -19,7 +19,7 @@ export const createMood = async (req, res) => {
         }
 
         const newMood = new Mood({
-            user_id: userId,
+            userId: userId, // Use standard field going forward
             mood: mood.toLowerCase(),
             mood_score: parseInt(mood_score),
             notes: notes || '',
@@ -61,7 +61,15 @@ export const getMoods = async (req, res) => {
             return res.json(cachedMoods);
         }
 
-        const moods = await Mood.find({ user_id: userId })
+        // Search across both userId and user_id for backward compatibility
+        const query = {
+            $or: [
+                { userId: userId },
+                { user_id: userId }
+            ]
+        };
+
+        const moods = await Mood.find(query)
             .sort({ logged_at: -1 })
             .skip(offset)
             .limit(limit);

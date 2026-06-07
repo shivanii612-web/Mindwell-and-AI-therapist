@@ -1,10 +1,15 @@
 import mongoose from 'mongoose';
 
 const journalSchema = new mongoose.Schema({
-    user_id: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false // Backward compatibility only
     },
     title: {
         type: String,
@@ -38,6 +43,7 @@ const journalSchema = new mongoose.Schema({
     }
 });
 
+journalSchema.index({ userId: 1, createdAt: -1 });
 journalSchema.index({ user_id: 1, createdAt: -1 });
 
 const Journal = mongoose.model('Journal', journalSchema);

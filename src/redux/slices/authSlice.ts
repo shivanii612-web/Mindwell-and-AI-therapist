@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { supabase } from '../../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
-const API_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : `http://${window.location.hostname}:5000`;
+import { API_URL, joinUrl } from '../../utils/apiUtils';
 
 export interface Profile {
   id: string;
@@ -47,7 +47,7 @@ export const getMe = createAsyncThunk(
 
       if (!token) throw new Error('No token found');
 
-      const response = await fetch(`${API_URL}/api/auth/me`, {
+      const response = await fetch(joinUrl(API_URL, '/auth/me'), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -79,12 +79,18 @@ export const signIn = createAsyncThunk(
   'auth/signIn',
   async ({ email, password, rememberMe = true }: { email: string; password: string; rememberMe?: boolean }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
+      let response;
+      try {
+        response = await fetch(joinUrl(API_URL, '/auth/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+      } catch (fetchError: any) {
+        console.error('MindWell: Login Connectivity Error:', fetchError.message);
+        throw new Error('Backend server is not running on port 5000. Please ensure the backend is started.');
+      }
 
       const data = await response.json();
       if (!response.ok) {
@@ -105,12 +111,18 @@ export const signUp = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password, full_name: fullName, username }),
-      });
+      let response;
+      try {
+        response = await fetch(joinUrl(API_URL, '/auth/register'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password, full_name: fullName, username }),
+        });
+      } catch (fetchError: any) {
+        console.error('MindWell: Registration Connectivity Error:', fetchError.message);
+        throw new Error('Backend server is not running on port 5000. Please ensure the backend is started.');
+      }
 
       const data = await response.json();
       if (!response.ok) {
@@ -139,7 +151,7 @@ export const resetPassword = createAsyncThunk(
   'auth/resetPassword',
   async (email: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      const response = await fetch(joinUrl(API_URL, '/auth/forgot-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

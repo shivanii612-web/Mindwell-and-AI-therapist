@@ -271,19 +271,23 @@ export const PaymentsPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {payments.slice(0, 5).map((payment) => (
+            {payments.slice(0, 5).map((payment: any) => (
               <div
-                key={payment.id}
+                key={payment.id || payment._id}
                 className="flex items-center justify-between p-4 rounded-xl bg-calm-50 dark:bg-calm-800/50"
               >
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5 text-lavender-500" />
                   <div>
                     <p className="font-medium text-calm-800 dark:text-white capitalize">
-                      {payment.metadata?.plan || 'Subscription'} Plan
+                      {payment.planName || 'Subscription'} Plan
                     </p>
                     <p className="text-xs text-calm-500">
-                      {format(new Date(payment.created_at), 'MMM d, yyyy')}
+                      {payment.paidAt
+                        ? format(new Date(payment.paidAt), 'MMM d, yyyy')
+                        : payment.createdAt
+                          ? format(new Date(payment.createdAt), 'MMM d, yyyy')
+                          : '—'}
                     </p>
                   </div>
                 </div>
@@ -292,7 +296,7 @@ export const PaymentsPage: React.FC = () => {
                     {payment.status}
                   </Badge>
                   <span className="font-bold text-calm-800 dark:text-white">
-                    ${payment.amount}
+                    ₹{payment.amount}
                   </span>
                 </div>
               </div>

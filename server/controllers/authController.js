@@ -20,22 +20,32 @@ const generateTokens = (userId) => {
 
 export const register = async (req, res) => {
     const { email, password, full_name, username } = req.body;
+    const normalizedEmail = email?.toLowerCase();
 
     try {
-        const existingUser = await User.findOne({ $or: [{ email }, { username: username || null }] });
+        const existingUser = await User.findOne({
+            $or: [
+                { email: normalizedEmail },
+                { username: username || null }
+            ]
+        });
         if (existingUser) {
             return res.status(409).json({ error: 'Email or username already registered' });
         }
 
-        const user = new User({ email, password, full_name, username });
+        const user = new User({
+            email: normalizedEmail,
+            password,
+            full_name,
+            username
+        });
         await user.save();
 
         const { accessToken, refreshToken } = generateTokens(user._id);
         user.refreshToken = refreshToken;
         await user.save();
 
-        // Optional: Send welcome email
-        await sendWelcomeEmail(email, full_name);
+        await sendWelcomeEmail(normalizedEmail, full_name);
 
         res.status(201).json({
             message: 'Registration successful',
@@ -62,9 +72,14 @@ export const login = async (req, res) => {
         }
 
         const { email, password } = req.body;
-        if (!email || !password) {
+        const normalizedEmail = email?.toLowerCase();
+
+        if (!normalizedEmail || !password) {
             return res.status(401).json({ error: 'Incorrect email or password' });
         }
+
+        // Safe debug log for identity verification (NO password logged)
+        console.log('MindWell: Login attempt:', { normalizedEmail });
 
         // Check DB connection status before attempt
         if (mongoose.connection.readyState !== 1) {
@@ -77,7 +92,7 @@ export const login = async (req, res) => {
             console.error('CRITICAL: JWT secrets are missing in environment variables.');
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return res.status(401).json({ error: 'Incorrect email or password' });
         }
@@ -94,7 +109,8 @@ export const login = async (req, res) => {
         user.refreshToken = refreshToken;
         await user.save();
 
-        console.log('MindWell: Login successful for user:', email);
+        console.log('MindWell: Login successful for user:', normalizedEmail);
+        logger.info('MindWell: Authentication successful', { email: normalizedEmail, userId: user._id });
 
         res.json({
             message: 'Login successful',

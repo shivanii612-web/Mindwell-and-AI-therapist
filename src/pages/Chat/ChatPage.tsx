@@ -19,7 +19,7 @@ import { openModal } from '@redux/slices/uiSlice';
 import { GlassCard } from '@components/ui/Layout';
 import { cn } from '@utils/cn';
 import { v4 as uuidv4 } from 'uuid';
-const API_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : `http://${window.location.hostname}:5000`;
+import { API_URL, joinUrl } from '@utils/apiUtils';
 
 interface Message {
   id: string;
@@ -38,12 +38,23 @@ const welcomeMessages = [
 
 export const ChatPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, session } = useAppSelector((state) => state.auth);
   const { messages, isTyping } = useAppSelector((state) => state.chat);
+
+  // Resolve token from session (Redux) or fall back to localStorage/sessionStorage.
+  // user.session does NOT exist — the token lives at state.auth.session.access_token.
+  const getToken = (): string => {
+    if (session?.access_token) return session.access_token;
+    try {
+      const stored = localStorage.getItem('mindwell-session') || sessionStorage.getItem('mindwell-session');
+      if (stored) return JSON.parse(stored).access_token || '';
+    } catch (_) { /* ignore */ }
+    return '';
+  };
   const [input, setInput] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [sessionId] = useState(() => {
-    const userId = user?.id || 'anonymous';
+    const userId = user?.id || user?._id || 'anonymous';
     const key = `mindwell-chat-session-id-${userId}`;
     const stored = localStorage.getItem(key);
     if (stored) return stored;
@@ -65,8 +76,16 @@ export const ChatPage: React.FC = () => {
   const fetchHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const userId = user?.id || 'anonymous';
-      const response = await fetch(`${API_URL}/api/chat/history/${sessionId}?userId=${userId}`);
+      const token = getToken();
+      if (!token) {
+        // No token means user is not authenticated yet — skip silently, will retry when user loads
+        setIsLoadingHistory(false);
+        return;
+      }
+      // Load history by sessionId; backend also searches by authenticated userId server-side
+      const response = await fetch(joinUrl(API_URL, `/chat/history/${sessionId}`), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
       if (response.ok) {
         const history: any[] = await response.json();
         if (history.length > 0) {
@@ -81,6 +100,8 @@ export const ChatPage: React.FC = () => {
           } as any));
           dispatch(setMessages(formattedHistory));
         }
+      } else {
+        console.warn('MindWell: fetchHistory returned', response.status);
       }
     } catch (err) {
       console.error('MindWell: Failed to fetch history:', err);
@@ -127,13 +148,14 @@ export const ChatPage: React.FC = () => {
     dispatch(setTyping(true));
 
     try {
-      const response = await fetch(`${API_URL}/api/chat`, {
+      const response = await fetch(joinUrl(API_URL, '/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`,
         },
         body: JSON.stringify({
-          userId: user?.id || 'anonymous',
+          userId: user?.id || user?._id || 'anonymous',
           sessionId,
           message: userMessage.content,
         }),

@@ -1,10 +1,16 @@
 import mongoose from 'mongoose';
 
 const moodSchema = new mongoose.Schema({
-    user_id: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
+    },
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        // Moving to userId standard, user_id made optional for legacy support
+        required: false,
     },
     mood: {
         type: String,
@@ -33,8 +39,9 @@ const moodSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// Index for faster queries by user and date (non-unique to allow multiple entries per day)
-moodSchema.index({ user_id: 1, logged_at: -1 }, { unique: false });
+// Indices for faster queries by user and date
+moodSchema.index({ userId: 1, logged_at: -1 });
+moodSchema.index({ user_id: 1, logged_at: -1 });
 
 const Mood = mongoose.model('Mood', moodSchema);
 

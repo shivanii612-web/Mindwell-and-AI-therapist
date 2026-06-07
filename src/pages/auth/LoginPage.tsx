@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@hooks/useRedux';
 import { signIn, clearError } from '@redux/slices/authSlice';
 import { GlassCard, GradientButton, GlassInput } from '@components/ui/Layout';
 import toast from 'react-hot-toast';
+import { useHealthCheck } from '@hooks/useHealthCheck';
 
 export const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -16,27 +17,57 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Centralized health check monitoring
+  useHealthCheck();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
 
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    console.log('MindWell: Attempting login for:', email, { rememberMe });
-    const result = await dispatch(signIn({ email, password, rememberMe }));
+    // Strict email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+
+    // Identify suspicious common typos
+    if (normalizedEmail.endsWith('.comi') || normalizedEmail.endsWith('.con')) {
+      toast.error('Please check your email for typos (e.g., .comi instead of .com)');
+      return;
+    }
+
+    console.log('MindWell: Login attempt email:', normalizedEmail);
+    const result = await dispatch(signIn({ email: normalizedEmail, password, rememberMe }));
 
     if (signIn.fulfilled.match(result)) {
       if (result.payload.token) {
         console.log('MindWell: Login Successful', {
           userId: result.payload.user?.id,
+          role: result.payload.user?.role,
           hasSession: !!result.payload.token
         });
         toast.success('Welcome back!');
-        console.log('MindWell: Triggering navigation to /dashboard');
-        navigate('/dashboard');
+
+        // Role-based redirection
+        const role = result.payload.user?.role;
+        if (role === 'therapist') {
+          console.log('MindWell: Redirecting to Therapist Portal');
+          navigate('/therapist');
+        } else if (role === 'admin') {
+          console.log('MindWell: Redirecting to Admin Panel');
+          navigate('/admin');
+        } else {
+          console.log('MindWell: Redirecting to Dashboard');
+          navigate('/dashboard');
+        }
       } else {
         toast.error('Invalid server response');
       }
@@ -153,6 +184,16 @@ export const LoginPage: React.FC = () => {
             className="font-semibold text-lavender-600 hover:text-lavender-500 dark:text-lavender-400 dark:hover:text-lavender-300 transition-colors"
           >
             Sign up for free
+          </Link>
+        </p>
+
+        <p className="mt-3 text-center text-sm text-calm-600 dark:text-calm-400">
+          Are you a therapist?{' '}
+          <Link
+            to="/therapist-apply"
+            className="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+          >
+            Apply to join →
           </Link>
         </p>
       </GlassCard>

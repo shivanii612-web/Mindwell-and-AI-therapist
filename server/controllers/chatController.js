@@ -139,6 +139,9 @@ export const chat = async (req, res) => {
         return res.status(400).json({ error: 'Message is required' });
     }
 
+    // Always use the authenticated user's _id from the JWT — never trust frontend-supplied userId
+    const authenticatedUserId = req.user._id.toString();
+
     // Save Data (Database or Memory)
     const storeMsg = async (data) => {
         if (mongoose.connection.readyState === 1) {
@@ -161,18 +164,35 @@ export const chat = async (req, res) => {
     }
 
     try {
-        // Load History (Database or Memory)
+        // Load History — search by BOTH sessionId AND authenticated userId so old
+        // messages are found even if sessionId changed (new browser, cleared storage, etc.)
         let history = [];
         if (mongoose.connection.readyState === 1) {
             try {
-                history = await Message.find({ sessionId }).sort({ timestamp: -1 }).limit(25);
+                const historyQuery = {
+                    $or: [
+                        { sessionId },
+                        { userId: authenticatedUserId },
+                    ]
+                };
+                // Also match stored ObjectId form if valid
+                if (mongoose.Types.ObjectId.isValid(authenticatedUserId)) {
+                    historyQuery.$or.push({ userId: new mongoose.Types.ObjectId(authenticatedUserId) });
+                }
+                history = await Message.find(historyQuery)
+                    .sort({ timestamp: -1 })
+                    .limit(25);
                 history = history.reverse();
             } catch (e) {
                 console.warn('DB Fetch failed, falling back to memory');
-                history = memoryStorage.filter(msg => msg.sessionId === sessionId).slice(-25);
+                history = memoryStorage
+                    .filter(msg => msg.sessionId === sessionId || msg.userId === authenticatedUserId)
+                    .slice(-25);
             }
         } else {
-            history = memoryStorage.filter(msg => msg.sessionId === sessionId).slice(-25);
+            history = memoryStorage
+                .filter(msg => msg.sessionId === sessionId || msg.userId === authenticatedUserId)
+                .slice(-25);
         }
 
         const formattedHistory = history.map(msg => ({
@@ -180,10 +200,20 @@ export const chat = async (req, res) => {
             parts: [{ text: msg.content }],
         }));
 
+        // Build the prompt context — if crisis detected, prepend a MANDATORY crisis instruction
+        // so Gemini cannot respond generically regardless of context drift.
+        const crisisInjection = isCrisisDetected
+            ? `MANDATORY OVERRIDE — CRISIS DETECTED. The user has expressed suicidal ideation or self-harm intent. You MUST respond with ONLY a crisis support message. Do NOT give a generic wellness response. Do NOT ask follow-up lifestyle questions. Your response MUST: (1) Acknowledge their pain directly and seriously, (2) State clearly that their life has value, (3) Ask them if they are safe RIGHT NOW, (4) Provide India crisis helplines: 112 (Emergency) or 1800-599-0019 (KIRAN Mental Health Helpline, free, 24/7), (5) Urge them not to be alone and to go near a trusted person immediately. If the user typed in Tanglish/Tamil, respond in warm Tanglish. This is a life-safety situation — no other response is acceptable.`
+            : null;
+
+        const systemTurn = crisisInjection
+            ? `${THERAPIST_SYSTEM_PROMPT}\n\n${crisisInjection}`
+            : THERAPIST_SYSTEM_PROMPT;
+
         // Generate Sentiment & Response
         const chatSession = model.startChat({
             history: [
-                { role: 'user', parts: [{ text: THERAPIST_SYSTEM_PROMPT }] },
+                { role: 'user', parts: [{ text: systemTurn }] },
                 { role: 'model', parts: [{ text: 'I understand my role as MindWell AI Therapist.' }] },
                 ...formattedHistory
             ],
@@ -192,8 +222,8 @@ export const chat = async (req, res) => {
         const result = await chatSession.sendMessage(message);
         let responseText = result.response.text();
 
-        await storeMsg({ userId, sessionId, role: 'user', content: message, sentiment: 'Neutral', isCrisis: isCrisisDetected });
-        await storeMsg({ userId, sessionId, role: 'assistant', content: responseText, isCrisis: isCrisisDetected });
+        await storeMsg({ userId: authenticatedUserId, sessionId, role: 'user', content: message, sentiment: 'Neutral', isCrisis: isCrisisDetected });
+        await storeMsg({ userId: authenticatedUserId, sessionId, role: 'assistant', content: responseText, isCrisis: isCrisisDetected });
 
         res.json({
             message: responseText,
@@ -205,13 +235,13 @@ export const chat = async (req, res) => {
     } catch (error) {
         console.error('Chat Gemini Error:', error.message);
 
-        // Return local therapist fallback response
-        const intent = detectIntent(message);
-        const responses = FALLBACK_RESPONSES[intent];
+        // Contextual fallback — crisis gets crisis fallback, not a generic one
+        const fallbackIntent = isCrisisDetected ? 'crisis' : detectIntent(message);
+        const responses = FALLBACK_RESPONSES[fallbackIntent] || FALLBACK_RESPONSES['neutral'];
         const responseText = responses[Math.floor(Math.random() * responses.length)];
 
-        await storeMsg({ userId, sessionId, role: 'user', content: message, sentiment: 'Neutral', isCrisis: isCrisisDetected });
-        await storeMsg({ userId, sessionId, role: 'assistant', content: responseText, isCrisis: isCrisisDetected });
+        await storeMsg({ userId: authenticatedUserId, sessionId, role: 'user', content: message, sentiment: 'Neutral', isCrisis: isCrisisDetected });
+        await storeMsg({ userId: authenticatedUserId, sessionId, role: 'assistant', content: responseText, isCrisis: isCrisisDetected });
 
         res.status(200).json({
             message: responseText,
@@ -224,24 +254,38 @@ export const chat = async (req, res) => {
 
 export const getHistory = async (req, res) => {
     const { sessionId } = req.params;
-    const { userId } = req.query;
+    // req.user is guaranteed by auth middleware — never undefined here
+    const userId = req.user._id.toString();
+
     try {
+        console.log('MindWell Debug: getHistory for sessionId:', sessionId, 'userId:', userId);
+
         let history;
         if (mongoose.connection.readyState === 1) {
-            if (userId && userId !== 'anonymous') {
-                history = await Message.find({ $or: [{ sessionId }, { userId }] }).sort({ timestamp: 1 });
-            } else {
-                history = await Message.find({ sessionId }).sort({ timestamp: 1 });
+            // Load ALL messages belonging to this user — sessionId is used as an OR condition
+            // so that old messages from previous sessions (different sessionId) are also returned.
+            const query = {
+                $or: [
+                    { sessionId },
+                    { userId },
+                ]
+            };
+            // Also match if userId was stored as ObjectId
+            if (mongoose.Types.ObjectId.isValid(userId)) {
+                query.$or.push({ userId: new mongoose.Types.ObjectId(userId) });
             }
+
+            console.log('MindWell Debug: getHistory query:', JSON.stringify(query));
+            history = await Message.find(query).sort({ timestamp: 1 });
+            console.log('MindWell Debug: Found messages count:', history.length);
         } else {
-            if (userId && userId !== 'anonymous') {
-                history = memoryStorage.filter(msg => msg.sessionId === sessionId || msg.userId === userId);
-            } else {
-                history = memoryStorage.filter(msg => msg.sessionId === sessionId);
-            }
+            history = memoryStorage.filter(msg =>
+                msg.sessionId === sessionId || msg.userId === userId
+            );
         }
         res.json(history);
     } catch (error) {
+        console.error('MindWell: getHistory error:', error);
         res.status(500).json({ error: 'Failed to fetch history' });
     }
 };

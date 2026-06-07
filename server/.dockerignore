@@ -1,9 +1,21 @@
+# Server build context exclusions
+# (used by server/Dockerfile that builds the Node/Express backend)
+
+# Dependencies — rebuilt inside container
 node_modules
+
+# Git
 .git
+
+# Env files — injected via docker-compose environment: section at runtime
 .env
+.env.local
+
+# Logs — generated at runtime
+logs/
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
+# Docker meta files
 Dockerfile
 .dockerignore

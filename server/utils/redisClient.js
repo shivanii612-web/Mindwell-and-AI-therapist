@@ -1,36 +1,7 @@
-import Redis from 'ioredis';
 import logger from './logger.js';
+import redisClient, { isRedisEnabled } from '../config/redis.js';
 
-const redisConfig = {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
-    retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-    },
-    maxRetriesPerRequest: 3,
-};
-
-let redisClient = null;
-
-try {
-    redisClient = new Redis(redisConfig);
-
-    redisClient.on('connect', () => {
-        logger.info('Redis: Connection established');
-    });
-
-    redisClient.on('error', (err) => {
-        logger.error('Redis: Connection error', { error: err.message });
-    });
-
-    redisClient.on('end', () => {
-        logger.warn('Redis: Connection closed');
-    });
-} catch (error) {
-    logger.error('Redis: Initialization failed', { error: error.message });
-}
+export { isRedisEnabled };
 
 export const getCachedData = async (key) => {
     if (!redisClient || redisClient.status !== 'ready') return null;

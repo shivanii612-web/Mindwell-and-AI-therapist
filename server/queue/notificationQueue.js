@@ -1,7 +1,8 @@
 import { Queue } from 'bullmq';
 import redisConnection from './redisConnection.js';
+import { isRedisEnabled } from '../config/redis.js';
 
-export const notificationQueue = new Queue('notificationQueue', {
+export const notificationQueue = isRedisEnabled ? new Queue('notificationQueue', {
     connection: redisConnection,
     defaultJobOptions: {
         attempts: 3,
@@ -12,7 +13,7 @@ export const notificationQueue = new Queue('notificationQueue', {
         removeOnComplete: true,
         removeOnFail: false,
     },
-});
+}) : null;
 
 export const QUEUE_JOB_TYPES = {
     EMAIL_EMERGENCY: 'EMAIL_EMERGENCY',

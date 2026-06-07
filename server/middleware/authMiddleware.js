@@ -6,10 +6,13 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mindwell-secure-secret-2024';
 
-export const requireRole = (role) => {
+export const requireRole = (roles) => {
     return (req, res, next) => {
-        if (!req.user || req.user.role !== role) {
-            return res.status(403).json({ error: `Access denied. Requires ${role} role.` });
+        const allowedRoles = Array.isArray(roles) ? roles : [roles];
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({
+                error: `Access denied. This action requires one of the following roles: ${allowedRoles.join(', ')}.`
+            });
         }
         next();
     };

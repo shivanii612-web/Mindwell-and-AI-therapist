@@ -32,6 +32,18 @@ const paymentSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'completed', 'failed'],
         default: 'pending'
+    },
+    paidAt: {
+        type: Date,
+        default: null
+    },
+    subscriptionEndDate: {
+        type: Date,
+        default: null
+    },
+    method: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

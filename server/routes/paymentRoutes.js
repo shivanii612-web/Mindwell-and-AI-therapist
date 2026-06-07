@@ -1,11 +1,22 @@
 import express from 'express';
-import { createOrder, verifyPayment, getSubscription } from '../controllers/paymentController.js';
-import { auth } from '../middleware/authMiddleware.js';
+import {
+    createOrder,
+    verifyPayment,
+    getSubscription,
+    getPaymentHistory,
+    getAdminPaymentStats,
+} from '../controllers/paymentController.js';
+import { auth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/create-order', auth, createOrder);
-router.post('/verify', auth, verifyPayment);
-router.get('/subscription', auth, getSubscription);
+// All payment routes require authentication
+router.use(auth);
+
+router.post('/create-order', createOrder);
+router.post('/verify', verifyPayment);
+router.get('/subscription', getSubscription);
+router.get('/history', getPaymentHistory);            // user's own history
+router.get('/admin/stats', requireRole(['admin']), getAdminPaymentStats);
 
 export default router;

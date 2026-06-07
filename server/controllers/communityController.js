@@ -57,7 +57,7 @@ export const getPosts = async (req, res) => {
 export const createPost = async (req, res) => {
     try {
         const { title, content, category, is_anonymous } = req.body;
-        const userId = req.user.id;
+        const userId = req.user._id; // Use _id — Mongoose documents expose ._id, not .id
 
         if (!title.trim() || !content.trim()) {
             return res.status(400).json({ message: 'Title and content are required' });
@@ -96,14 +96,14 @@ export const createPost = async (req, res) => {
 export const toggleLike = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id;
+        const userId = req.user._id; // Use _id — consistent with auth middleware
 
         const post = await CommunityPost.findById(id);
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        const likeIndex = post.likes.indexOf(userId);
+        const likeIndex = post.likes.indexOf(userId.toString());
         if (likeIndex === -1) {
             // Like
             post.likes.push(userId);
@@ -121,7 +121,7 @@ export const toggleLike = async (req, res) => {
         res.status(200).json({
             id: post._id,
             likes_count: post.likes.length,
-            is_liked: post.likes.includes(userId)
+            is_liked: post.likes.map(l => l.toString()).includes(userId.toString())
         });
     } catch (error) {
         console.error('MindWell: Error toggling like:', error);
@@ -133,7 +133,7 @@ export const addComment = async (req, res) => {
     try {
         const { id } = req.params;
         const { text } = req.body;
-        const userId = req.user.id;
+        const userId = req.user._id; // Use _id — consistent with auth middleware
         const user = await User.findById(userId);
 
         if (!text || !text.trim()) {

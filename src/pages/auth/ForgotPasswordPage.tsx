@@ -16,14 +16,22 @@ export const ForgotPasswordPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
       toast.error('Please enter your email address');
       return;
     }
 
+    // Strict email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+
     setIsLoading(true);
-    const result = await dispatch(resetPassword(email));
+    const result = await dispatch(resetPassword(normalizedEmail));
     setIsLoading(false);
 
     if (resetPassword.fulfilled.match(result)) {

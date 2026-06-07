@@ -4,7 +4,7 @@ export const createJournal = async (req, res) => {
     try {
         const journal = new Journal({
             ...req.body,
-            user_id: req.user._id
+            userId: req.user._id // Use standard field going forward
         });
         await journal.save();
 
@@ -18,7 +18,14 @@ export const createJournal = async (req, res) => {
 export const getJournals = async (req, res) => {
     try {
         const { limit = 20, offset = 0 } = req.query;
-        const journals = await Journal.find({ user_id: req.user._id })
+        const query = {
+            $or: [
+                { userId: req.user._id },
+                { user_id: req.user._id }
+            ]
+        };
+
+        const journals = await Journal.find(query)
             .sort({ created_at: -1 })
             .limit(parseInt(limit))
             .skip(parseInt(offset));
@@ -32,7 +39,14 @@ export const getJournals = async (req, res) => {
 
 export const getJournal = async (req, res) => {
     try {
-        const journal = await Journal.findOne({ _id: req.params.id, user_id: req.user._id });
+        const query = {
+            _id: req.params.id,
+            $or: [
+                { userId: req.user._id },
+                { user_id: req.user._id }
+            ]
+        };
+        const journal = await Journal.findOne(query);
         if (!journal) {
             return res.status(404).json({ error: 'Journal entry not found.' });
         }
@@ -45,8 +59,15 @@ export const getJournal = async (req, res) => {
 
 export const updateJournal = async (req, res) => {
     try {
+        const query = {
+            _id: req.params.id,
+            $or: [
+                { userId: req.user._id },
+                { user_id: req.user._id }
+            ]
+        };
         const journal = await Journal.findOneAndUpdate(
-            { _id: req.params.id, user_id: req.user._id },
+            query,
             req.body,
             { new: true, runValidators: true }
         );
@@ -64,7 +85,14 @@ export const updateJournal = async (req, res) => {
 
 export const deleteJournal = async (req, res) => {
     try {
-        const journal = await Journal.findOneAndDelete({ _id: req.params.id, user_id: req.user._id });
+        const query = {
+            _id: req.params.id,
+            $or: [
+                { userId: req.user._id },
+                { user_id: req.user._id }
+            ]
+        };
+        const journal = await Journal.findOneAndDelete(query);
         if (!journal) {
             return res.status(404).json({ error: 'Journal entry not found.' });
         }

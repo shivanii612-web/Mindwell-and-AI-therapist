@@ -30,8 +30,17 @@ export const SignupPage: React.FC = () => {
     e.preventDefault();
     dispatch(clearError());
 
-    if (!fullName || !email || !password || !confirmPassword) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!fullName || !normalizedEmail || !password || !confirmPassword) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Strict email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      toast.error('Please enter a valid email address.');
       return;
     }
 
@@ -45,8 +54,8 @@ export const SignupPage: React.FC = () => {
       return;
     }
 
-    console.log('MindWell: Attempting signup for:', email);
-    const result = await dispatch(signUp({ email, password, fullName, username }));
+    console.log('MindWell: Attempting signup for:', normalizedEmail);
+    const result = await dispatch(signUp({ email: normalizedEmail, password, fullName, username }));
 
     if (signUp.fulfilled.match(result)) {
       if (result.payload.token) {

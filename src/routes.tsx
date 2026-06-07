@@ -21,9 +21,13 @@ import CommunityPage from './pages/Community/CommunityPage';
 import PaymentsPage from './pages/Payments/PaymentsPage';
 import PricingPage from './pages/Payments/PricingPage';
 import SettingsPage from './pages/Settings/SettingsPage';
+import TherapistDashboard from './pages/Therapist/TherapistDashboard';
+import AdminPanel from './pages/Admin/AdminPanel';
+import ConsultationRoom from './pages/Consultation/ConsultationRoom';
 
 import TermsOfService from './pages/legal/TermsOfService';
 import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import TherapistApplyPage from './pages/auth/TherapistApplyPage';
 
 const router = createBrowserRouter([
   {
@@ -37,6 +41,11 @@ const router = createBrowserRouter([
   {
     path: '/privacy',
     element: <PrivacyPolicy />,
+  },
+  {
+    // Standalone page — has its own nav/layout, NOT inside AuthLayout or DashboardLayout
+    path: '/therapist-apply',
+    element: <TherapistApplyPage />,
   },
   {
     element: <AuthLayout />,
@@ -101,6 +110,18 @@ const router = createBrowserRouter([
       {
         path: '/pricing',
         element: <PricingPage />,
+      },
+      {
+        path: '/therapist',
+        element: <TherapistDashboard />,
+      },
+      {
+        path: '/admin',
+        element: <AdminPanel />,
+      },
+      {
+        path: '/consultation',
+        element: <ConsultationRoom />,
       },
     ],
   },
