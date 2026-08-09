@@ -119,7 +119,9 @@ export const submitApplication = async (req, res) => {
 export const getApplications = async (req, res) => {
     try {
         const { status } = req.query; // optional filter: ?status=pending
-        const filter = status ? { status } : {};
+        // Validate against allowed status values — prevents arbitrary field injection
+        const ALLOWED_STATUSES = ['pending', 'approved', 'rejected'];
+        const filter = (status && ALLOWED_STATUSES.includes(status)) ? { status } : {};
 
         const applications = await TherapistApplication.find(filter)
             .select('-password_hash') // never expose hash to frontend
@@ -280,6 +282,10 @@ export const rejectApplication = async (req, res) => {
 export const checkApplicationStatus = async (req, res) => {
     try {
         const email = req.params.email?.toLowerCase().trim();
+        // Validate email format before using as query value
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email address.' });
+        }
         const application = await TherapistApplication.findOne({ email }).select(
             'status createdAt reviewed_at admin_notes email full_name'
         );

@@ -1,6 +1,7 @@
 import CommunityPost from '../Models/CommunityPost.js';
 import CommunityComment from '../Models/CommunityComment.js';
 import User from '../Models/User.js';
+import mongoose from 'mongoose';
 import { getCachedData, setCachedData, invalidatePattern } from '../Utils/redisClient.js';
 
 // Basic safety check for crisis content
@@ -15,6 +16,9 @@ const containsCrisisContent = (text) => {
 
 const SAFETY_MESSAGE = "This sounds serious. Please use emergency support or talk to someone you trust immediately.";
 
+// Allowed category values — must match what the CommunityPost schema accepts
+const ALLOWED_CATEGORIES = ['anxiety', 'depression', 'stress', 'relationships', 'mindfulness', 'general', 'all'];
+
 export const getPosts = async (req, res) => {
     try {
         const { category } = req.query;
@@ -26,7 +30,11 @@ export const getPosts = async (req, res) => {
         }
 
         let query = {};
+        // Only use category in the DB query if it is a known allowed value
         if (category && category !== 'all') {
+            if (!ALLOWED_CATEGORIES.includes(category)) {
+                return res.status(400).json({ message: 'Invalid category.' });
+            }
             query.category = category;
         }
 
@@ -98,6 +106,10 @@ export const toggleLike = async (req, res) => {
         const { id } = req.params;
         const userId = req.user._id; // Use _id — consistent with auth middleware
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid post ID.' });
+        }
+
         const post = await CommunityPost.findById(id);
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
@@ -134,6 +146,11 @@ export const addComment = async (req, res) => {
         const { id } = req.params;
         const { text } = req.body;
         const userId = req.user._id; // Use _id — consistent with auth middleware
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid post ID.' });
+        }
+
         const user = await User.findById(userId);
 
         if (!text || !text.trim()) {
@@ -179,6 +196,11 @@ export const addComment = async (req, res) => {
 export const getComments = async (req, res) => {
     try {
         const { postId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ message: 'Invalid post ID.' });
+        }
+
         const cacheKey = `community:comments:${postId}`;
 
         const cachedComments = await getCachedData(cacheKey);

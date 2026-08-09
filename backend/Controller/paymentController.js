@@ -99,6 +99,12 @@ export const verifyPayment = async (req, res) => {
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + (planConfig?.durationDays || 30));
 
+        // Validate razorpay_order_id format before using as query value
+        // Razorpay order IDs are alphanumeric strings starting with "order_"
+        if (typeof razorpay_order_id !== 'string' || !/^order_[A-Za-z0-9]+$/.test(razorpay_order_id)) {
+            return res.status(400).json({ success: false, message: 'Invalid payment order ID format.' });
+        }
+
         // Update payment record to completed
         const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
         if (payment) {

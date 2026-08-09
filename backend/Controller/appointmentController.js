@@ -156,6 +156,9 @@ export const getAppointmentById = async (req, res) => {
     try {
         await autoUpdateMissedAppointments();
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
         const appointment = await Appointment.findById(id)
             .populate('userId', 'full_name email')
             .populate('therapistId', 'full_name email');
@@ -484,6 +487,11 @@ export const addSessionNotes = async (req, res) => {
 };
 
 // ADMIN: Get all appointments
+// Allowed appointment status values — must match the Appointment schema enum
+const ALLOWED_APPOINTMENT_STATUSES = ['Pending Review', 'Pending Therapist Assignment', 'Accepted', 'Rejected', 'Completed', 'Cancelled', 'Missed'];
+// Allowed user role values for the getAllUsers role filter
+const ALLOWED_USER_ROLES = ['user', 'therapist', 'admin'];
+
 export const getAllAppointments = async (req, res) => {
     try {
         await autoUpdateMissedAppointments();
@@ -491,18 +499,33 @@ export const getAllAppointments = async (req, res) => {
         let query = {};
 
         if (status) {
+            // Validate against allowed values — prevents arbitrary field injection
+            if (!ALLOWED_APPOINTMENT_STATUSES.includes(status)) {
+                return res.status(400).json({ message: 'Invalid status filter.' });
+            }
             query.status = status;
         }
 
         if (date) {
+            // Validate date format (YYYY-MM-DD) before constructing Date objects
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD.' });
+            }
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
             endOfDay.setHours(23, 59, 59, 999);
+            if (isNaN(startOfDay.getTime())) {
+                return res.status(400).json({ message: 'Invalid date value.' });
+            }
             query.preferredDate = { $gte: startOfDay, $lte: endOfDay };
         }
 
         if (therapistId) {
+            // Validate as ObjectId before using in query
+            if (!mongoose.Types.ObjectId.isValid(therapistId)) {
+                return res.status(400).json({ message: 'Invalid therapist ID.' });
+            }
             query.therapistId = therapistId;
         }
 
@@ -524,8 +547,9 @@ export const getAllAppointments = async (req, res) => {
         }
 
         if (page && limit) {
-            const pageNum = parseInt(page) || 1;
-            const limitNum = parseInt(limit) || 10;
+            // Clamp pagination values to safe integers
+            const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+            const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
             const total = await Appointment.countDocuments(query);
             const appointments = await Appointment.find(query)
                 .populate('userId', 'full_name email')
@@ -561,12 +585,16 @@ export const getAllUsers = async (req, res) => {
         }
 
         if (role && role !== 'all') {
+            // Validate against allowed role values
+            if (!ALLOWED_USER_ROLES.includes(role)) {
+                return res.status(400).json({ message: 'Invalid role filter.' });
+            }
             query.role = role;
         }
 
         if (page && limit) {
-            const pageNum = parseInt(page) || 1;
-            const limitNum = parseInt(limit) || 10;
+            const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+            const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
             const total = await User.countDocuments(query);
             const users = await User.find(query, '-password -refreshToken -resetPasswordToken')
                 .sort({ createdAt: -1 })

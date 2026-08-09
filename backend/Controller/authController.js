@@ -366,6 +366,11 @@ export const resetPassword = async (req, res) => {
       });
     }
 
+    // Validate token: must be a 64-char hex string produced by crypto.randomBytes(32)
+    if (typeof token !== 'string' || !/^[a-f0-9]{64}$/i.test(token)) {
+      return res.status(400).json({ error: "Invalid or expired token." });
+    }
+
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() },
@@ -499,6 +504,10 @@ export const getAllUsers = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid user ID." });
+    }
 
     const user = await User.findById(id);
 
