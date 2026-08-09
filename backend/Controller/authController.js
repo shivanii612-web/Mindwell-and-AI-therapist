@@ -49,13 +49,20 @@ export const register = async (req, res) => {
   try {
     const { full_name, email, password } = req.body;
 
-    const normalizedEmail = email?.toLowerCase();
-
-    if (!full_name || !normalizedEmail || !password) {
+    if (
+      !full_name ||
+      !email ||
+      !password ||
+      typeof full_name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
       return res.status(400).json({
         error: "Full name, email and password are required.",
       });
     }
+
+    const normalizedEmail = email.toLowerCase();
 
     const existingUser = await User.findOne({
       email: normalizedEmail,
@@ -124,13 +131,18 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const normalizedEmail = email?.toLowerCase();
-
-    if (!normalizedEmail || !password) {
+    if (
+      !email ||
+      !password ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
       return res.status(400).json({
         error: "Email and password are required.",
       });
     }
+
+    const normalizedEmail = email.toLowerCase();
 
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
@@ -286,7 +298,7 @@ export const forgotPassword = async (req, res) => {
 
     const { email } = req.body;
 
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return res.status(400).json({
         error: "Email is required.",
       });
@@ -563,7 +575,14 @@ export const createAdmin = async (req, res) => {
   try {
     const { full_name, email, password } = req.body;
 
-    if (!full_name || !email || !password) {
+    if (
+      !full_name ||
+      !email ||
+      !password ||
+      typeof full_name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
       return res.status(400).json({
         error: "Full name, email and password are required.",
       });
@@ -615,6 +634,19 @@ export const createAdmin = async (req, res) => {
 export const createFirstAdmin = async (req, res) => {
   try {
     const { full_name, email, password } = req.body;
+
+    if (
+      !full_name ||
+      !email ||
+      !password ||
+      typeof full_name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        error: "Full name, email and password are required.",
+      });
+    }
 
     const existingAdmin = await User.findOne({
       role: "admin",

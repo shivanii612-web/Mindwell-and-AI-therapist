@@ -44,6 +44,24 @@ export const submitApplication = async (req, res) => {
             });
         }
 
+        // Validate that all expected text fields are strings
+        if (
+            typeof full_name !== 'string' ||
+            typeof email !== 'string' ||
+            typeof phone !== 'string' ||
+            typeof qualification !== 'string' ||
+            typeof specialization !== 'string' ||
+            typeof license_number !== 'string' ||
+            typeof bio !== 'string' ||
+            typeof available_timings !== 'string' ||
+            typeof password !== 'string' ||
+            (certificate_url !== undefined && certificate_url !== null && typeof certificate_url !== 'string')
+        ) {
+            return res.status(400).json({
+                error: 'All text fields must be valid strings.',
+            });
+        }
+
         if (password.length < 8) {
             return res.status(400).json({ error: 'Password must be at least 8 characters.' });
         }

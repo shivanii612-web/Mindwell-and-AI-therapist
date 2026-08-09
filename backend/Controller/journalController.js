@@ -3,8 +3,14 @@ import mongoose from 'mongoose';
 
 export const createJournal = async (req, res) => {
     try {
+        const { title, content, mood, mood_score, tags, is_private } = req.body;
         const journal = new Journal({
-            ...req.body,
+            title,
+            content,
+            mood,
+            mood_score,
+            tags,
+            is_private,
             userId: req.user._id // Use standard field going forward
         });
         await journal.save();

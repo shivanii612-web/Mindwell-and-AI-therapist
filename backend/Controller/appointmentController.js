@@ -550,6 +550,9 @@ export const getAllAppointments = async (req, res) => {
         }
 
         if (search) {
+            if (typeof search !== 'string') {
+                return res.status(400).json({ message: 'Search query must be a string.' });
+            }
             const users = await User.find({
                 $or: [
                     { full_name: { $regex: search, $options: 'i' } },
@@ -598,6 +601,9 @@ export const getAllUsers = async (req, res) => {
         const query = {};
 
         if (search) {
+            if (typeof search !== 'string') {
+                return res.status(400).json({ message: 'Search query must be a string.' });
+            }
             query.$or = [
                 { full_name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } }
