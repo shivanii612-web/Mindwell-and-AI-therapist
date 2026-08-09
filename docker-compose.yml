@@ -17,7 +17,7 @@ services:
   # ── Backend (Node/Express) ──────────────────────────────────────────────────
   backend:
     build:
-      context: ./server
+      context: ./backend
       dockerfile: Dockerfile
     container_name: mindwell-backend
     ports:
@@ -55,11 +55,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
+ 
   # ── BullMQ Worker (email/notification jobs) ─────────────────────────────────
   worker:
     build:
-      context: ./server
+      context: ./backend
       dockerfile: Dockerfile
     container_name: mindwell-worker
     command: ["node", "worker-entry.js"]
@@ -80,11 +80,11 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
+ 
   # ── Frontend (React/Vite built → served by NGINX) ───────────────────────────
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         # VITE_ vars must be set at BUILD TIME — not runtime

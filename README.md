@@ -242,19 +242,9 @@ docker compose down -v
 
 ---
 
-## Test Accounts (seed)
+## Accounts
 
-Run the seed script once after setting up the backend:
-```bash
-cd server
-node seed-accounts.js
-```
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@mindwell.ai | Admin@123 |
-| Therapist | therapist@mindwell.ai | Therapist@123 |
-| User | Sign up via `/signup` | — |
+There are no seeded or default accounts. All accounts must be created manually using signup or API requests.
 
 ---
 
