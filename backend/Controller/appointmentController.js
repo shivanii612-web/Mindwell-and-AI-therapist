@@ -109,6 +109,10 @@ export const updateAppointmentStatus = async (req, res) => {
         const userId = req.user._id;
         const role = req.user.role;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         // Users may only cancel their own appointments
         // Admins may set any status
         const allowedUserStatuses = ['Cancelled'];
@@ -320,6 +324,10 @@ export const acceptAppointment = async (req, res) => {
         const { id } = req.params;
         const therapistId = req.user._id;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         // Atomic: find appointment only if it is still unassigned
         let appointment = await Appointment.findOneAndUpdate(
             {
@@ -409,6 +417,10 @@ export const rejectAppointment = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         const appointment = await Appointment.findByIdAndUpdate(
             id,
             { status: 'Rejected' },
@@ -438,6 +450,10 @@ export const getSessionNotes = async (req, res) => {
         const uid = req.user._id.toString();
         const role = req.user.role;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         const appointment = await Appointment.findById(id);
         if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
 
@@ -460,6 +476,10 @@ export const addSessionNotes = async (req, res) => {
         const { sessionNotes } = req.body;
         const uid = req.user._id.toString();
         const role = req.user.role;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
 
         if (typeof sessionNotes !== 'string') {
             return res.status(400).json({ message: 'sessionNotes must be a string' });
@@ -615,6 +635,9 @@ export const getAllUsers = async (req, res) => {
 export const blockUser = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
         const user = await User.findByIdAndUpdate(id, { isBlocked: true }, { new: true, select: '-password -refreshToken' });
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json({ message: 'User blocked successfully', user });
@@ -627,6 +650,9 @@ export const blockUser = async (req, res) => {
 export const unblockUser = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
         const user = await User.findByIdAndUpdate(id, { isBlocked: false }, { new: true, select: '-password -refreshToken' });
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json({ message: 'User unblocked successfully', user });
@@ -639,6 +665,9 @@ export const unblockUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
         const user = await User.findById(id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -666,6 +695,10 @@ export const updateUserRole = async (req, res) => {
         const { id } = req.params;
         const { role } = req.body;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
+
         if (!['user', 'therapist', 'admin'].includes(role)) {
             return res.status(400).json({ message: 'Invalid role' });
         }
@@ -690,6 +723,10 @@ export const startSession = async (req, res) => {
         const { id } = req.params;
         const therapistId = req.user._id;
         const role = req.user.role;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
 
         const appointment = await Appointment.findById(id);
         if (!appointment) {
@@ -749,6 +786,10 @@ export const endSession = async (req, res) => {
         const userId = req.user._id;
         const role = req.user.role;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         const appointment = await Appointment.findById(id);
         if (!appointment) {
             return res.status(404).json({ message: 'Appointment not found.' });
@@ -796,6 +837,10 @@ export const resetSession = async (req, res) => {
         const therapistId = req.user._id;
         const role = req.user.role;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
+
         const appointment = await Appointment.findById(id);
         if (!appointment) {
             return res.status(404).json({ message: 'Appointment not found.' });
@@ -833,6 +878,9 @@ export const resetSession = async (req, res) => {
 export const suspendTherapist = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid therapist ID.' });
+        }
         const user = await User.findOneAndUpdate(
             { _id: id, role: 'therapist' },
             { isSuspended: true },
@@ -849,6 +897,9 @@ export const suspendTherapist = async (req, res) => {
 export const unsuspendTherapist = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid therapist ID.' });
+        }
         const user = await User.findOneAndUpdate(
             { _id: id, role: 'therapist' },
             { isSuspended: false },
@@ -865,6 +916,9 @@ export const unsuspendTherapist = async (req, res) => {
 export const deleteTherapist = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid therapist ID.' });
+        }
         const user = await User.findOne({ _id: id, role: 'therapist' });
         if (!user) return res.status(404).json({ message: 'Therapist not found' });
 
@@ -901,6 +955,10 @@ export const assignTherapist = async (req, res) => {
     try {
         const { id } = req.params;
         const { therapistId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
 
         if (!mongoose.Types.ObjectId.isValid(therapistId)) {
             return res.status(400).json({ message: 'Invalid therapist ID.' });
@@ -961,6 +1019,10 @@ export const assignTherapist = async (req, res) => {
 export const autoAssignTherapist = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid appointment ID.' });
+        }
 
         const appointment = await Appointment.findById(id);
         if (!appointment) {
