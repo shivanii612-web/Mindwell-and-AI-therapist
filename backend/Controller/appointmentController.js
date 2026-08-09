@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Appointment from '../Models/Appointment.js';
 import User from '../Models/User.js';
 import Journal from '../Models/Journal.js';
@@ -877,7 +878,12 @@ export const assignTherapist = async (req, res) => {
             return res.status(400).json({ message: 'Invalid therapist ID.' });
         }
 
-        const therapist = await User.findOne({ _id: therapistId, role: 'therapist', isBlocked: false, isSuspended: false });
+        const therapist = await User.findOne({
+            _id: therapistId,
+            role: 'therapist',
+            isBlocked: { $ne: true },
+            isSuspended: { $ne: true },
+        });
         if (!therapist) {
             return res.status(404).json({ message: 'Approved active therapist not found.' });
         }
@@ -933,7 +939,7 @@ export const autoAssignTherapist = async (req, res) => {
             return res.status(404).json({ message: 'Appointment not found.' });
         }
 
-        const therapists = await User.find({ role: 'therapist', isBlocked: false, isSuspended: false });
+        const therapists = await User.find({ role: 'therapist', isBlocked: { $ne: true }, isSuspended: { $ne: true } });
         if (therapists.length === 0) {
             return res.status(404).json({ message: 'No active therapists found for assignment.' });
         }

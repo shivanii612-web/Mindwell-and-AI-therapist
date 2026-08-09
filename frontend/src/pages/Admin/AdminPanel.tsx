@@ -1252,11 +1252,14 @@ export const AdminPanel: React.FC = () => {
                                         
                                         {isPendingUnassigned && (
                                             <button
-                                                onClick={() => setAssignModal({
-                                                    isOpen: true,
-                                                    appointmentId: apt._id,
-                                                    patientName: apt.userId?.full_name || 'Unknown'
-                                                })}
+                                                onClick={() => {
+                                                    setAssignModal({
+                                                        isOpen: true,
+                                                        appointmentId: apt._id,
+                                                        patientName: apt.userId?.full_name || 'Unknown'
+                                                    });
+                                                    fetchTherapists();
+                                                }}
                                                 className="px-3 py-1.5 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-bold text-xs transition-all shadow-md shadow-violet-500/10 shrink-0"
                                             >
                                                 Assign Therapist
@@ -1577,7 +1580,9 @@ export const AdminPanel: React.FC = () => {
                                     className="w-full text-sm p-2.5 rounded-xl bg-white/50 dark:bg-calm-800 border border-calm-200 dark:border-calm-700 text-calm-700 dark:text-calm-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                                 >
                                     <option value="">-- Choose Therapist --</option>
-                                    {users.filter(u => u.role === 'therapist' && !u.isBlocked && !u.isSuspended).map(t => (
+                                    {loadingTherapists ? (
+                                        <option disabled>Loading therapists…</option>
+                                    ) : therapists.filter(t => !t.isBlocked && !t.isSuspended).map(t => (
                                         <option key={t._id} value={t._id}>{t.full_name} ({t.email})</option>
                                     ))}
                                 </select>
