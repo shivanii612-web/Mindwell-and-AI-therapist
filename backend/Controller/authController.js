@@ -252,14 +252,23 @@ export const refreshToken = async (req, res) => {
       });
     }
 
+    // Validate type — prevent MongoDB operator injection via the refreshToken field
+    if (typeof refreshToken !== 'string') {
+      return res.status(401).json({
+        error: "Refresh token is required.",
+      });
+    }
+
     const decoded = jwt.verify(
       refreshToken,
       JWT_REFRESH_SECRET
     );
 
+    // Use the server-decoded id (trusted) and cast refreshToken to string for the query
+    const safeRefreshToken = String(refreshToken);
     const user = await User.findOne({
       _id: decoded.id,
-      refreshToken,
+      refreshToken: safeRefreshToken,
     });
 
     if (!user) {

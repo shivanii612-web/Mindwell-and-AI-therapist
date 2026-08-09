@@ -300,8 +300,8 @@ export const rejectApplication = async (req, res) => {
 export const checkApplicationStatus = async (req, res) => {
     try {
         const email = req.params.email?.toLowerCase().trim();
-        // Validate email format before using as query value
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        // Guard against ReDoS: limit length before applying regex, then validate format
+        if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return res.status(400).json({ error: 'Invalid email address.' });
         }
         const application = await TherapistApplication.findOne({ email }).select(

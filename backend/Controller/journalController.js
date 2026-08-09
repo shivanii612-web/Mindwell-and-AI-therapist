@@ -78,10 +78,10 @@ export const updateJournal = async (req, res) => {
         // Only allow known editable fields — prevents operator injection via req.body
         const { title, content, mood, tags } = req.body;
         const updateFields = {};
-        if (title !== undefined) updateFields.title = title;
-        if (content !== undefined) updateFields.content = content;
-        if (mood !== undefined) updateFields.mood = mood;
-        if (tags !== undefined) updateFields.tags = tags;
+        if (title !== undefined) updateFields.title = typeof title === 'string' ? title : String(title ?? '');
+        if (content !== undefined) updateFields.content = typeof content === 'string' ? content : String(content ?? '');
+        if (mood !== undefined) updateFields.mood = typeof mood === 'string' ? mood : String(mood ?? '');
+        if (tags !== undefined) updateFields.tags = Array.isArray(tags) ? tags.map(String) : [];
 
         const query = {
             _id: req.params.id,

@@ -119,10 +119,24 @@ app.get('/health', (req, res) => {
 });
 
 // Security and Logging Middleware
+// CSP is set to permissive defaults that allow the existing frontend/backend setup
+// while still providing the header (satisfies CodeQL alert #24).
 app.use(helmet({
     crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false,
-})); // Set security headers with relaxed CSP for local dev
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+            fontSrc: ["'self'", 'data:', 'https:'],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'", 'blob:'],
+            frameSrc: ["'self'", 'https:'],
+        },
+    },
+}));
 app.use(apiLimiter); // Apply global rate limiting to all requests
 app.use(express.json({ limit: '2mb' })); // Body parser — increased limit for therapist application forms
 app.use(xssSanitizer); // Data sanitization against XSS

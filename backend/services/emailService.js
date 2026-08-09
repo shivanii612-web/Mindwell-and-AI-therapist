@@ -3,6 +3,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Minimal HTML entity escaper — prevents XSS when embedding user-supplied
+// values into email HTML. Only escapes the five characters that are
+// dangerous in HTML context; does not alter any other characters.
+const escapeHtml = (str) => {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+};
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -40,13 +53,14 @@ export const sendResetPasswordEmail = async (email, token) => {
 };
 
 export const sendWelcomeEmail = async (email, name) => {
+  const safeName = escapeHtml(name);
   const mailOptions = {
     from: `"MindWell Support" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Welcome to MindWell!',
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
-        <h2>Welcome to MindWell, ${name}!</h2>
+        <h2>Welcome to MindWell, ${safeName}!</h2>
         <p>We're honored to accompany you on your wellness journey. MindWell is here to provide support, guidance, and a safe space for reflection.</p>
         <p>You can start talking to your AI Therapist right now.</p>
         <a href="http://localhost:5173/chat" style="display: inline-block; padding: 10px 20px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">Start Your First Session</a>
@@ -78,31 +92,31 @@ export const sendAppointmentRequestEmail = async (details) => {
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">User Name:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.userName}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.userName)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">User Email:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.userEmail}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.userEmail)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Session Type:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.sessionType}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.sessionType)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Preferred Date:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.preferredDate}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.preferredDate)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Preferred Time:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.preferredTime}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.preferredTime)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Reason:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.reason}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.reason)}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Notes:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${details.notes || 'None'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.notes || 'None')}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Status:</td>
@@ -134,7 +148,7 @@ export const sendSupportEmail = async (details) => {
   const mailOptions = {
     from: `"MindWell Support System" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
-    subject: `MindWell Support Request - [${details.category}] - ${details.subject}`,
+    subject: `MindWell Support Request - [${escapeHtml(details.category)}] - ${escapeHtml(details.subject)}`,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
         <h2 style="color: #6366f1;">New Support Request</h2>
@@ -142,23 +156,23 @@ export const sendSupportEmail = async (details) => {
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #edf2f7; width: 140px;">User Name:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${details.userName}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.userName)}</td>
           </tr>
           <tr>
             <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #edf2f7;">User Email:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${details.userEmail}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.userEmail)}</td>
           </tr>
           <tr>
             <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Category:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${details.category}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.category)}</td>
           </tr>
           <tr>
             <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Subject:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${details.subject}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #edf2f7;">${escapeHtml(details.subject)}</td>
           </tr>
           <tr>
             <td style="padding: 20px 10px; font-weight: bold; border-bottom: 1px solid #edf2f7; vertical-align: top;">Message:</td>
-            <td style="padding: 20px 10px; border-bottom: 1px solid #edf2f7; line-height: 1.6; white-space: pre-wrap;">${details.message}</td>
+            <td style="padding: 20px 10px; border-bottom: 1px solid #edf2f7; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(details.message)}</td>
           </tr>
           <tr>
             <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Submitted Time:</td>

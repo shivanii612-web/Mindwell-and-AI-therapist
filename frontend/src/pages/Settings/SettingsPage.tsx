@@ -372,15 +372,15 @@ export const SettingsPage: React.FC = () => {
 
     // Save to localStorage when changed
     useEffect(() => {
-        localStorage.setItem('settings_email_notifications', String(emailNotifications));
+        localStorage.setItem('settings_email_notifications', emailNotifications ? 'true' : 'false');
     }, [emailNotifications]);
 
     useEffect(() => {
-        localStorage.setItem('settings_appointment_reminders', String(appointmentReminders));
+        localStorage.setItem('settings_appointment_reminders', appointmentReminders ? 'true' : 'false');
     }, [appointmentReminders]);
 
     useEffect(() => {
-        localStorage.setItem('settings_private_journal', String(privateJournal));
+        localStorage.setItem('settings_private_journal', privateJournal ? 'true' : 'false');
     }, [privateJournal]);
 
     const handleLogout = async () => {

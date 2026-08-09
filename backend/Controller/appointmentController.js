@@ -519,16 +519,14 @@ export const getAllAppointments = async (req, res) => {
         let query = {};
 
         if (status) {
-            // Validate against allowed values — prevents arbitrary field injection
-            if (!ALLOWED_APPOINTMENT_STATUSES.includes(status)) {
+            if (typeof status !== 'string' || !ALLOWED_APPOINTMENT_STATUSES.includes(status)) {
                 return res.status(400).json({ message: 'Invalid status filter.' });
             }
             query.status = status;
         }
 
         if (date) {
-            // Validate date format (YYYY-MM-DD) before constructing Date objects
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
                 return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD.' });
             }
             const startOfDay = new Date(date);
@@ -542,21 +540,23 @@ export const getAllAppointments = async (req, res) => {
         }
 
         if (therapistId) {
-            // Validate as ObjectId before using in query
-            if (!mongoose.Types.ObjectId.isValid(therapistId)) {
+            if (typeof therapistId !== 'string' || !mongoose.Types.ObjectId.isValid(therapistId)) {
                 return res.status(400).json({ message: 'Invalid therapist ID.' });
             }
-            query.therapistId = therapistId;
+            query.therapistId = new mongoose.Types.ObjectId(therapistId);
         }
 
         if (search) {
             if (typeof search !== 'string') {
                 return res.status(400).json({ message: 'Search query must be a string.' });
             }
+            // Escape special regex characters so the search term is a literal substring match,
+            // not an arbitrary regular expression supplied by the user.
+            const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const users = await User.find({
                 $or: [
-                    { full_name: { $regex: search, $options: 'i' } },
-                    { email: { $regex: search, $options: 'i' } }
+                    { full_name: { $regex: escapedSearch, $options: 'i' } },
+                    { email: { $regex: escapedSearch, $options: 'i' } }
                 ]
             }).select('_id');
             const userIds = users.map(u => u._id);
@@ -564,13 +564,15 @@ export const getAllAppointments = async (req, res) => {
                 { userId: { $in: userIds } },
                 { user_id: { $in: userIds } },
                 { therapistId: { $in: userIds } },
-                { sessionType: { $regex: search, $options: 'i' } },
-                { reason: { $regex: search, $options: 'i' } }
+                { sessionType: { $regex: escapedSearch, $options: 'i' } },
+                { reason: { $regex: escapedSearch, $options: 'i' } }
             ];
         }
 
         if (page && limit) {
-            // Clamp pagination values to safe integers
+            if (typeof page !== 'string' || typeof limit !== 'string') {
+                return res.status(400).json({ message: 'Page and limit must be string parameters.' });
+            }
             const pageNum = Math.max(parseInt(page, 10) || 1, 1);
             const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
             const total = await Appointment.countDocuments(query);
@@ -604,21 +606,24 @@ export const getAllUsers = async (req, res) => {
             if (typeof search !== 'string') {
                 return res.status(400).json({ message: 'Search query must be a string.' });
             }
+            const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             query.$or = [
-                { full_name: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
+                { full_name: { $regex: escapedSearch, $options: 'i' } },
+                { email: { $regex: escapedSearch, $options: 'i' } }
             ];
         }
 
         if (role && role !== 'all') {
-            // Validate against allowed role values
-            if (!ALLOWED_USER_ROLES.includes(role)) {
+            if (typeof role !== 'string' || !ALLOWED_USER_ROLES.includes(role)) {
                 return res.status(400).json({ message: 'Invalid role filter.' });
             }
             query.role = role;
         }
 
         if (page && limit) {
+            if (typeof page !== 'string' || typeof limit !== 'string') {
+                return res.status(400).json({ message: 'Page and limit must be string parameters.' });
+            }
             const pageNum = Math.max(parseInt(page, 10) || 1, 1);
             const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
             const total = await User.countDocuments(query);
@@ -705,11 +710,12 @@ export const updateUserRole = async (req, res) => {
             return res.status(400).json({ message: 'Invalid user ID.' });
         }
 
-        if (!['user', 'therapist', 'admin'].includes(role)) {
+        if (typeof role !== 'string' || !['user', 'therapist', 'admin'].includes(role)) {
             return res.status(400).json({ message: 'Invalid role' });
         }
 
-        const user = await User.findByIdAndUpdate(id, { role }, { new: true, select: '-password -refreshToken' });
+        const userObjectId = new mongoose.Types.ObjectId(id);
+        const user = await User.findByIdAndUpdate(userObjectId, { role }, { new: true, select: '-password -refreshToken' });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         res.json({ message: 'User role updated', user });

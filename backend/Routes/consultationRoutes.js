@@ -75,9 +75,12 @@ router.post('/:appointmentId/daily-room', async (req, res) => {
         // even if two requests race before the DB is updated.
         const roomName = `mw-${appointmentId}`;
 
+        // ── SSRF protection: all fetch calls go only to the trusted Daily.co API ──
+        const DAILY_API_BASE = 'https://api.daily.co';
+
         // Check if room already exists on Daily side (handles race condition)
         let roomUrl = null;
-        const checkRes = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+        const checkRes = await fetch(`${DAILY_API_BASE}/v1/rooms/${encodeURIComponent(roomName)}`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${DAILY_API_KEY}`,
@@ -92,7 +95,7 @@ router.post('/:appointmentId/daily-room', async (req, res) => {
             console.log(`MindWell Daily: Room already exists on Daily — reusing: ${roomName}`);
         } else if (checkRes.status === 404) {
             // Room does not exist — create it
-            const createRes = await fetch('https://api.daily.co/v1/rooms', {
+            const createRes = await fetch(`${DAILY_API_BASE}/v1/rooms`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${DAILY_API_KEY}`,
@@ -160,7 +163,8 @@ router.get('/:appointmentId/messages', async (req, res) => {
             return res.status(403).json({ error: 'Access denied. You are not a participant in this consultation.' });
         }
 
-        const messages = await ConsultationMessage.find({ appointmentId })
+        const safeAppointmentId = new mongoose.Types.ObjectId(appointmentId);
+        const messages = await ConsultationMessage.find({ appointmentId: safeAppointmentId })
             .sort({ createdAt: 1 })
             .populate('senderId', 'full_name role');
 
