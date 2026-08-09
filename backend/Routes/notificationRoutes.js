@@ -1,10 +1,12 @@
 import express from 'express';
 import { auth } from '../Middleware/authMiddleware.js';
+import { apiLimiter } from '../Middleware/securityMiddleware.js';
 import Notification from '../Models/Notification.js';
 
 const router = express.Router();
 
 router.use(auth);
+router.use(apiLimiter);
 
 // GET /api/notifications
 router.get('/', async (req, res) => {
