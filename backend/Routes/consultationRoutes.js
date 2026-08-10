@@ -168,12 +168,8 @@ router.get('/:appointmentId/messages', async (req, res) => {
             .sort({ createdAt: 1 })
             .populate('senderId', 'full_name role');
 
-        // Prevent caching/storage of sensitive consultation message data anywhere
-        // along the response path (browser, proxies, shared caches), and stop the
-        // identifying appointmentId from leaking to third parties via the Referer header.
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        res.set('Pragma', 'no-cache');
-        res.set('Referrer-Policy', 'no-referrer');
+        // Prevent caching of sensitive consultation message data
+        res.set('Cache-Control', 'no-store');
         res.json(messages);
     } catch (error) {
         console.error('MindWell: consultationRoutes getMessages error:', error);

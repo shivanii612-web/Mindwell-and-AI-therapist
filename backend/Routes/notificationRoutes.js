@@ -13,12 +13,8 @@ const notificationLimiter = rateLimit({
     message: 'Too many requests, please try again after 15 minutes',
 });
 
-// Apply rate limiting to every route on this router (mounted via .use() so
-// CodeQL's middleware-stack analysis recognizes it as covering all handlers below).
-router.use(notificationLimiter);
-
 // GET /api/notifications
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, notificationLimiter, async (req, res) => {
     try {
         const notifications = await Notification.find({
             $or: [
@@ -35,7 +31,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // PATCH /api/notifications/:id/read
-router.patch('/:id/read', auth, async (req, res) => {
+router.patch('/:id/read', auth, notificationLimiter, async (req, res) => {
     try {
         const notification = await Notification.findOneAndUpdate(
             {
@@ -61,7 +57,7 @@ router.patch('/:id/read', auth, async (req, res) => {
 });
 
 // POST /api/notifications/mark-all-read
-router.post('/mark-all-read', auth, async (req, res) => {
+router.post('/mark-all-read', auth, notificationLimiter, async (req, res) => {
     try {
         await Notification.updateMany(
             {
@@ -82,7 +78,7 @@ router.post('/mark-all-read', auth, async (req, res) => {
 });
 
 // DELETE /api/notifications
-router.delete('/', auth, async (req, res) => {
+router.delete('/', auth, notificationLimiter, async (req, res) => {
     try {
         await Notification.deleteMany({
             $or: [
@@ -99,7 +95,7 @@ router.delete('/', auth, async (req, res) => {
 });
 
 // DELETE /api/notifications/:id
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, notificationLimiter, async (req, res) => {
     try {
         const notification = await Notification.findOneAndDelete({
             _id: req.params.id,
