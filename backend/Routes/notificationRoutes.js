@@ -5,18 +5,16 @@ import Notification from '../Models/Notification.js';
 
 const router = express.Router();
 
-router.use(auth);
-
-router.use(rateLimit({
+const notificationLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: 'Too many requests, please try again after 15 minutes',
-}));
+});
 
-// GET /api/notificationsnode --check backend/Routes/notificationRoutes.js
-router.get('/', async (req, res) => {
+// GET /api/notifications
+router.get('/', auth, notificationLimiter, async (req, res) => {
     try {
         const notifications = await Notification.find({
             $or: [
@@ -33,7 +31,7 @@ router.get('/', async (req, res) => {
 });
 
 // PATCH /api/notifications/:id/read
-router.patch('/:id/read', async (req, res) => {
+router.patch('/:id/read', auth, notificationLimiter, async (req, res) => {
     try {
         const notification = await Notification.findOneAndUpdate(
             {
@@ -59,7 +57,7 @@ router.patch('/:id/read', async (req, res) => {
 });
 
 // POST /api/notifications/mark-all-read
-router.post('/mark-all-read', async (req, res) => {
+router.post('/mark-all-read', auth, notificationLimiter, async (req, res) => {
     try {
         await Notification.updateMany(
             {
@@ -80,7 +78,7 @@ router.post('/mark-all-read', async (req, res) => {
 });
 
 // DELETE /api/notifications
-router.delete('/', async (req, res) => {
+router.delete('/', auth, notificationLimiter, async (req, res) => {
     try {
         await Notification.deleteMany({
             $or: [
@@ -97,7 +95,7 @@ router.delete('/', async (req, res) => {
 });
 
 // DELETE /api/notifications/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, notificationLimiter, async (req, res) => {
     try {
         const notification = await Notification.findOneAndDelete({
             _id: req.params.id,
@@ -113,7 +111,7 @@ router.delete('/:id', async (req, res) => {
 
         res.json({ message: 'Notification deleted successfully' });
     } catch (error) {
-        console.error('MindWell: Failed to delete notification:', error);
+        console.error('MindWell: Failed to clear notification:', error);
         res.status(500).json({ message: 'Failed to delete notification' });
     }
 });
