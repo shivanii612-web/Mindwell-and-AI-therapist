@@ -1,25 +1,21 @@
 import express from 'express';
 import { auth } from '../Middleware/authMiddleware.js';
-import { apiLimiter } from '../Middleware/securityMiddleware.js';
 import rateLimit from 'express-rate-limit';
 import Notification from '../Models/Notification.js';
 
 const router = express.Router();
 
-// Dedicated rate limiter for notification routes — no localhost skip,
-// so CodeQL recognises rate limiting as unconditionally applied.
-const notificationLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+router.use(auth);
+
+router.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: 'Too many requests, please try again after 15 minutes',
-});
+}));
 
-router.use(auth);
-router.use(notificationLimiter);
-
-// GET /api/notifications
+// GET /api/notificationsnode --check backend/Routes/notificationRoutes.js
 router.get('/', async (req, res) => {
     try {
         const notifications = await Notification.find({
@@ -28,6 +24,7 @@ router.get('/', async (req, res) => {
                 { user_id: req.user._id }
             ]
         }).sort({ createdAt: -1 });
+
         res.json(notifications);
     } catch (error) {
         console.error('MindWell: Failed to fetch notifications:', error);
@@ -49,9 +46,11 @@ router.patch('/:id/read', async (req, res) => {
             { $set: { is_read: true, isRead: true } },
             { new: true }
         );
+
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
         }
+
         res.json(notification);
     } catch (error) {
         console.error('MindWell: Failed to mark notification as read:', error);
@@ -72,6 +71,7 @@ router.post('/mark-all-read', async (req, res) => {
             },
             { $set: { is_read: true, isRead: true } }
         );
+
         res.json({ message: 'All notifications marked as read' });
     } catch (error) {
         console.error('MindWell: Failed to mark all notifications as read:', error);
@@ -88,6 +88,7 @@ router.delete('/', async (req, res) => {
                 { user_id: req.user._id }
             ]
         });
+
         res.json({ message: 'Notifications cleared' });
     } catch (error) {
         console.error('MindWell: Failed to clear notifications:', error);
@@ -105,9 +106,11 @@ router.delete('/:id', async (req, res) => {
                 { user_id: req.user._id }
             ]
         });
+
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
         }
+
         res.json({ message: 'Notification deleted successfully' });
     } catch (error) {
         console.error('MindWell: Failed to delete notification:', error);
