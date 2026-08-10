@@ -139,7 +139,7 @@ export const getApplications = async (req, res) => {
         const { status } = req.query; // optional filter: ?status=pending
         // Validate against allowed status values — prevents arbitrary field injection
         const ALLOWED_STATUSES = ['pending', 'approved', 'rejected'];
-        const filter = (status && ALLOWED_STATUSES.includes(status)) ? { status } : {};
+        const filter = (status && ALLOWED_STATUSES.includes(status)) ? { status: String(status) } : {};
 
         const applications = await TherapistApplication.find(filter)
             .select('-password_hash') // never expose hash to frontend

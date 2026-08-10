@@ -35,7 +35,7 @@ export const getPosts = async (req, res) => {
             if (!ALLOWED_CATEGORIES.includes(category)) {
                 return res.status(400).json({ message: 'Invalid category.' });
             }
-            query.category = category;
+            query.category = String(category);
         }
 
         const posts = await CommunityPost.find(query)

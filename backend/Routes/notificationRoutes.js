@@ -1,12 +1,23 @@
 import express from 'express';
 import { auth } from '../Middleware/authMiddleware.js';
 import { apiLimiter } from '../Middleware/securityMiddleware.js';
+import rateLimit from 'express-rate-limit';
 import Notification from '../Models/Notification.js';
 
 const router = express.Router();
 
+// Dedicated rate limiter for notification routes — no localhost skip,
+// so CodeQL recognises rate limiting as unconditionally applied.
+const notificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many requests, please try again after 15 minutes',
+});
+
 router.use(auth);
-router.use(apiLimiter);
+router.use(notificationLimiter);
 
 // GET /api/notifications
 router.get('/', async (req, res) => {

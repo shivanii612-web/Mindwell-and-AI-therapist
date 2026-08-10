@@ -168,6 +168,8 @@ router.get('/:appointmentId/messages', async (req, res) => {
             .sort({ createdAt: 1 })
             .populate('senderId', 'full_name role');
 
+        // Prevent caching of sensitive consultation message data
+        res.set('Cache-Control', 'no-store');
         res.json(messages);
     } catch (error) {
         console.error('MindWell: consultationRoutes getMessages error:', error);
