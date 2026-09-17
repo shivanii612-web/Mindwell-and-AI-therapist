@@ -31,6 +31,7 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
+    "https://mindwell-and-ai-therapist.vercel.app",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5173",
@@ -46,12 +47,13 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
 
-        // Dynamic allowed origins for development and local network
+        // Dynamic allowed origins for development, local network, and deployed frontend
         const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('[::1]');
         const isPrivateIP = /^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(origin);
         const isAllowedSubdomain = /\.mindwellhealth\.ai$/.test(origin);
+        const isVercel = origin.endsWith('.vercel.app') || origin.includes('vercel.app') || allowedOrigins.includes(origin);
 
-        if (isLocalhost || isPrivateIP || isAllowedSubdomain) {
+        if (isLocalhost || isPrivateIP || isAllowedSubdomain || isVercel) {
             callback(null, true);
         } else {
             logger.warn(`MindWell: CORS blocked for origin: ${origin}`);
@@ -72,7 +74,8 @@ const io = new SocketIOServer(httpServer, {
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('[::1]');
             const isPrivateIP = /^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(origin);
             const isAllowedSubdomain = /\.mindwellhealth\.ai$/.test(origin);
-            if (isLocalhost || isPrivateIP || isAllowedSubdomain) {
+            const isVercel = origin.endsWith('.vercel.app') || origin.includes('vercel.app') || allowedOrigins.includes(origin);
+            if (isLocalhost || isPrivateIP || isAllowedSubdomain || isVercel) {
                 callback(null, true);
             } else {
                 callback(new Error('Socket.io: origin not allowed'));
