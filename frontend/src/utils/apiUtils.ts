@@ -9,13 +9,8 @@ export const getApiUrl = () => {
         return envApiUrl.replace(/\/+$/, '');
     }
 
-    // In Production (Docker/Static Build), use relative path /api
-    if (import.meta.env.PROD || import.meta.env.MODE === 'production') {
-        return '/api';
-    }
-
-    // Fallback to deployed Render backend URL
-    return 'https://mindwell-and-ai-therapist.onrender.com/api';
+    // Default to the deployed Render backend URL
+    return 'https://mindwell-and-ai-therapist.onrender.com';
 };
 
 export const API_URL = getApiUrl();

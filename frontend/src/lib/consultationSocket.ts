@@ -18,15 +18,7 @@ const getBackendUrl = (): string => {
         return envApiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
     }
 
-    // In Production, use relative origin or window.location.origin
-    if (import.meta.env.PROD || import.meta.env.MODE === 'production') {
-        if (typeof window !== 'undefined') {
-            return window.location.origin;
-        }
-        return '';
-    }
-
-    // Fallback to deployed Render backend URL
+    // Default to deployed Render backend URL
     return 'https://mindwell-and-ai-therapist.onrender.com';
 };
 

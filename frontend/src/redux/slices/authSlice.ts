@@ -51,9 +51,14 @@ export const getMe = createAsyncThunk(
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server error (${response.status})`);
+      }
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch profile');
+        throw new Error(data?.error || 'Failed to fetch profile');
       }
 
       return data;
@@ -91,9 +96,14 @@ export const signIn = createAsyncThunk(
         throw new Error('Could not connect to the server. Please ensure the backend is running.');
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server error (${response.status})`);
+      }
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data?.error || 'Login failed');
       }
 
       return { ...data, rememberMe };
@@ -122,9 +132,14 @@ export const signUp = createAsyncThunk(
         throw new Error('Could not connect to the server. Please ensure the backend is running.');
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server error (${response.status})`);
+      }
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data?.error || 'Registration failed');
       }
 
       return data;
@@ -156,9 +171,14 @@ export const resetPassword = createAsyncThunk(
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server error (${response.status})`);
+      }
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset email');
+        throw new Error(data?.error || 'Failed to send reset email');
       }
 
       return true;
