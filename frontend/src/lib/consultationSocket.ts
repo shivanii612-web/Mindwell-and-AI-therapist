@@ -26,9 +26,8 @@ const getBackendUrl = (): string => {
         return '';
     }
 
-    // In Development, dynamically resolve to the current hostname on port 5000
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    return `http://${hostname || 'localhost'}:5000`;
+    // Fallback to deployed Render backend URL
+    return 'https://mindwell-and-ai-therapist.onrender.com';
 };
 
 // Read JWT access token from localStorage or sessionStorage

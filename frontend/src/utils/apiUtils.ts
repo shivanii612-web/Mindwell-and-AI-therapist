@@ -14,9 +14,8 @@ export const getApiUrl = () => {
         return '/api';
     }
 
-    // In Development, dynamically resolve to the current hostname on port 5000
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    return `http://${hostname || 'localhost'}:5000/api`;
+    // Fallback to deployed Render backend URL
+    return 'https://mindwell-and-ai-therapist.onrender.com/api';
 };
 
 export const API_URL = getApiUrl();
