@@ -47,13 +47,14 @@ const generateTokens = (userId) => {
 
 export const register = async (req, res) => {
   try {
-    const { full_name, email, password } = req.body;
+    const { full_name, fullName, email, password } = req.body;
+    const name = full_name || fullName;
 
     if (
-      !full_name ||
+      !name ||
       !email ||
       !password ||
-      typeof full_name !== "string" ||
+      typeof name !== "string" ||
       typeof email !== "string" ||
       typeof password !== "string"
     ) {
@@ -62,7 +63,13 @@ export const register = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase();
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        error: "Database not connected. Please verify MongoDB Atlas connection in Render environment.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
 
     const existingUser = await User.findOne({
       email: normalizedEmail,
@@ -75,7 +82,7 @@ export const register = async (req, res) => {
     }
 
     const user = new User({
-      full_name,
+      full_name: name.trim(),
       email: normalizedEmail,
       password,
     });
@@ -91,7 +98,7 @@ export const register = async (req, res) => {
     try {
       await sendWelcomeEmail(
         normalizedEmail,
-        full_name
+        name.trim()
       );
     } catch (err) {
       logger.warn("Welcome Email Error", {
@@ -120,7 +127,7 @@ export const register = async (req, res) => {
     });
 
     return res.status(500).json({
-      error: "Registration failed.",
+      error: error.message || "Registration failed.",
     });
   }
 };

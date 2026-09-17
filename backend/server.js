@@ -157,39 +157,51 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/therapist-applications', therapistApplicationRoutes);
 
-// Database Connection with Fallback
+// Database Connection with Retry and Auto-Reconnection
 const uri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/mindwell";
+
+const connectMongo = async () => {
+    if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
+        return;
+    }
+    try {
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 10000,
+        });
+    } catch (err) {
+        logger.error('MindWell: MongoDB connection error:', { message: err.message });
+    }
+};
 
 if (!global._mongoInitialized) {
     global._mongoInitialized = true;
     mongoose.connection.on('connected', () => {
         logger.info('MindWell: MongoDB connected');
     });
-}
-
-if (!global._mongoDbConnection) {
-    global._mongoDbConnection = uri
-        ? mongoose.connect(uri)
-        : Promise.reject(new Error('MongoDB URI is not defined in .env file.'));
-}
-const dbConnection = global._mongoDbConnection;
-
-dbConnection
-    .then(() => {
-        // Handled by mongoose.connection connected event listener
-    })
-    .catch((err) => {
+    mongoose.connection.on('error', (err) => {
         logger.error('MindWell: MongoDB connection error:', { message: err.message });
-        logger.warn('MindWell: Falling back to In-Memory Storage.');
-    })
-    .finally(() => {
-        const BIND_IP = '0.0.0.0';
-        if (!global._serverListening) {
-            global._serverListening = true;
-            // Use httpServer.listen (not app.listen) so Socket.io shares the same port
-            httpServer.listen(PORT, BIND_IP, () => {
-                logger.info(`MindWell: Backend running on port ${PORT}`);
-                logger.info('MindWell: Socket.IO ready');
-            });
-        }
     });
+    mongoose.connection.on('disconnected', () => {
+        logger.warn('MindWell: MongoDB disconnected. Reconnection will be attempted.');
+    });
+}
+
+connectMongo().finally(() => {
+    const BIND_IP = '0.0.0.0';
+    if (!global._serverListening) {
+        global._serverListening = true;
+        // Use httpServer.listen (not app.listen) so Socket.io shares the same port
+        httpServer.listen(PORT, BIND_IP, () => {
+            logger.info(`MindWell: Backend running on port ${PORT}`);
+            logger.info('MindWell: Socket.IO ready');
+        });
+    }
+});
+
+// Periodic reconnect attempt if database gets disconnected
+setInterval(() => {
+    if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+        connectMongo();
+    }
+}, 10000);
